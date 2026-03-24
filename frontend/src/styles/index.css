@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme {
+  --color-shell: #f8f8f8;
+  --color-sidebar: #f5f5f4;
+  --color-panel: #ffffff;
+  --color-muted-panel: #f3f3f5;
+  --color-border-soft: rgba(0, 0, 0, 0.1);
+  --color-text-strong: #101828;
+  --color-text-muted: #667085;
+  --color-navy: #131522;
+  --color-accent-blue: #3b82f6;
+  --color-accent-green: #22c55e;
+  --color-accent-purple: #9333ea;
+  --color-accent-orange: #f97316;
+  --color-surface-soft: #f8f9fb;
+  --color-surface-muted: #eff1f6;
+  --color-surface-selected: #ececef;
+  --color-surface-hover: #efefee;
+  --color-icon-muted: #cfd4dc;
+  --color-progress-track: #eceff3;
+  --color-progress-neutral: #e4e7ec;
+  --color-progress-dark: #141727;
+  --color-progress-muted: #c7cad1;
+  --shadow-panel: 0 1px 2px rgba(15, 23, 42, 0.035);
+  --shadow-dialog: 0 24px 48px rgba(16, 24, 40, 0.18);
+  --radius-shell: 18px;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-shell);
+  color: var(--color-text-strong);
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  overflow: hidden;
+}
+
+:root[data-theme="dark"] {
+  --color-shell: #181b20;
+  --color-sidebar: #1f2329;
+  --color-panel: #232830;
+  --color-muted-panel: #2a3038;
+  --color-border-soft: rgba(255, 255, 255, 0.1);
+  --color-text-strong: #f5f7fa;
+  --color-text-muted: #aab3c2;
+  --color-navy: #3a414c;
+  --color-surface-soft: #2a2f37;
+  --color-surface-muted: #323844;
+  --color-surface-selected: #edf0f6;
+  --color-surface-hover: #2e343d;
+  --color-icon-muted: #6f7886;
+  --color-progress-track: #313844;
+  --color-progress-neutral: #505866;
+  --color-progress-dark: #f5f7fa;
+  --color-progress-muted: #6a7280;
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-dialog: 0 24px 48px rgba(0, 0, 0, 0.4);
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-scrollbar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.app-scrollbar::-webkit-scrollbar-thumb {
+  background: #d7dae0;
+  border-radius: 999px;
+}

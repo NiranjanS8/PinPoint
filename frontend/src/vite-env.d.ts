@@ -1,5 +1,1 @@
-interface Window {
-  pinpointDesktop?: {
-    openExternal: (url: string) => Promise<void>;
-  };
-}
+/// <reference types="vite/client" />

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "wait-on tcp:5173 tcp:9090 && electron .",
     "start": "electron .",
-    "build": "node -e \"console.log('Electron shell is ready for packaging in a later phase.')\""
+    "build": "node -e \"console.log('Electron shell ready.')\""
   },
   "dependencies": {
     "electron": "^37.1.0"

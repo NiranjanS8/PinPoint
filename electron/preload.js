@@ -1,5 +1,5 @@
-const { contextBridge, shell } = require("electron");
+const { contextBridge } = require("electron");
 
 contextBridge.exposeInMainWorld("pinpointDesktop", {
-  openExternal: (url) => shell.openExternal(url)
+  platform: process.platform
 });

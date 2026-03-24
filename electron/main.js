@@ -1,35 +1,16 @@
 const { app, BrowserWindow, shell } = require("electron");
-const { spawn } = require("child_process");
-const fs = require("fs");
 const path = require("path");
 
 const isDev = !app.isPackaged;
-let backendProcess;
-
-function startBackendIfPackaged() {
-  if (isDev) {
-    return;
-  }
-
-  const jarPath = path.join(__dirname, "..", "backend", "target", "pinpoint-backend-1.0.0.jar");
-  if (!fs.existsSync(jarPath)) {
-    return;
-  }
-
-  backendProcess = spawn("java", ["-jar", jarPath], {
-    cwd: path.join(__dirname, ".."),
-    windowsHide: true
-  });
-}
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 1440,
     height: 920,
-    minWidth: 1100,
-    minHeight: 720,
-    backgroundColor: "#222831",
+    minWidth: 1200,
+    minHeight: 760,
     title: "Pinpoint",
+    backgroundColor: "#f8f8f8",
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -44,8 +25,7 @@ function createWindow() {
   });
 
   if (isDev) {
-    mainWindow.loadURL("http://localhost:5173");
-    mainWindow.webContents.openDevTools({ mode: "detach" });
+    mainWindow.loadURL("http://127.0.0.1:5173");
     return;
   }
 
@@ -53,7 +33,6 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  startBackendIfPackaged();
   createWindow();
 
   app.on("activate", () => {
@@ -64,10 +43,6 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  if (backendProcess) {
-    backendProcess.kill();
-  }
-
   if (process.platform !== "darwin") {
     app.quit();
   }

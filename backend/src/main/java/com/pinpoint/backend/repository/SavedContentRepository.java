@@ -1,21 +1,17 @@
 package com.pinpoint.backend.repository;
 
-import com.pinpoint.backend.entity.SavedContent;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.pinpoint.backend.entity.SavedContent;
+
 public interface SavedContentRepository extends JpaRepository<SavedContent, Long> {
 
-    boolean existsByUrl(String url);
+    boolean existsByNormalizedUrl(String normalizedUrl);
 
-    Optional<SavedContent> findByUrl(String url);
+    Optional<SavedContent> findByNormalizedUrl(String normalizedUrl);
 
     List<SavedContent> findAllByOrderByPinnedDescCreatedAtDesc();
-
-    List<SavedContent> findAllByOrderByCreatedAtDesc();
-
-    List<SavedContent> findAllByFolderIdIn(Collection<Long> folderIds);
 }

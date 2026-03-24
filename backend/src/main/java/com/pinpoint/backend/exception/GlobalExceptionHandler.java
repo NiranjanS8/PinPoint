@@ -1,73 +1,98 @@
 package com.pinpoint.backend.exception;
 
-import com.pinpoint.backend.dto.response.ApiErrorResponse;
-import jakarta.validation.ConstraintViolationException;
+import java.time.LocalDateTime;
+import java.util.stream.Collectors;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import java.util.List;
+import com.pinpoint.backend.dto.ErrorResponse;
 
-@RestControllerAdvice
+import jakarta.servlet.http.HttpServletRequest;
+
+@ControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidYoutubeUrlException.class)
-    public ResponseEntity<ApiErrorResponse> handleInvalidYoutubeUrl(InvalidYoutubeUrlException exception) {
-        return buildResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), List.of());
+    public ResponseEntity<ErrorResponse> handleInvalidYoutubeUrl(
+            InvalidYoutubeUrlException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), request);
     }
 
     @ExceptionHandler(DuplicateContentException.class)
-    public ResponseEntity<ApiErrorResponse> handleDuplicateContent(DuplicateContentException exception) {
-        return buildResponse(HttpStatus.CONFLICT, exception.getMessage(), List.of());
+    public ResponseEntity<ErrorResponse> handleDuplicateContent(
+            DuplicateContentException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.CONFLICT, exception.getMessage(), request);
     }
 
     @ExceptionHandler(ContentNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleContentNotFound(ContentNotFoundException exception) {
-        return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), List.of());
-    }
-
-    @ExceptionHandler(FolderNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleFolderNotFound(FolderNotFoundException exception) {
-        return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), List.of());
-    }
-
-    @ExceptionHandler(InvalidFolderOperationException.class)
-    public ResponseEntity<ApiErrorResponse> handleInvalidFolderOperation(InvalidFolderOperationException exception) {
-        return buildResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), List.of());
+    public ResponseEntity<ErrorResponse> handleContentNotFound(
+            ContentNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request);
     }
 
     @ExceptionHandler(MetadataFetchException.class)
-    public ResponseEntity<ApiErrorResponse> handleMetadataFetch(MetadataFetchException exception) {
-        return buildResponse(HttpStatus.BAD_GATEWAY, exception.getMessage(), List.of());
+    public ResponseEntity<ErrorResponse> handleMetadataFetch(
+            MetadataFetchException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.BAD_GATEWAY, exception.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
-        List<String> details = exception.getBindingResult()
-                .getAllErrors()
+    public ResponseEntity<ErrorResponse> handleValidationErrors(
+            MethodArgumentNotValidException exception,
+            HttpServletRequest request
+    ) {
+        String message = exception.getBindingResult()
+                .getFieldErrors()
                 .stream()
-                .map(error -> error instanceof FieldError fieldError
-                        ? fieldError.getField() + ": " + fieldError.getDefaultMessage()
-                        : error.getDefaultMessage())
-                .toList();
-        return buildResponse(HttpStatus.BAD_REQUEST, "Validation failed.", details);
+                .map(FieldError::getDefaultMessage)
+                .collect(Collectors.joining(", "));
+
+        return buildResponse(HttpStatus.BAD_REQUEST, message, request);
     }
 
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ApiErrorResponse> handleConstraintViolation(ConstraintViolationException exception) {
-        return buildResponse(HttpStatus.BAD_REQUEST, "Validation failed.", List.of(exception.getMessage()));
+    @ExceptionHandler({MethodArgumentTypeMismatchException.class, IllegalArgumentException.class})
+    public ResponseEntity<ErrorResponse> handleBadRequest(
+            Exception exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), request);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiErrorResponse> handleGenericException(Exception exception) {
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Something went wrong.", List.of(exception.getMessage()));
+    public ResponseEntity<ErrorResponse> handleGeneric(
+            Exception exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error", request);
     }
 
-    private ResponseEntity<ApiErrorResponse> buildResponse(HttpStatus status, String message, List<String> details) {
-        ApiErrorResponse response = new ApiErrorResponse(status.value(), status.getReasonPhrase(), message, details);
+    private ResponseEntity<ErrorResponse> buildResponse(
+            HttpStatus status,
+            String message,
+            HttpServletRequest request
+    ) {
+        ErrorResponse response = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(status.value())
+                .error(status.getReasonPhrase())
+                .message(message)
+                .path(request.getRequestURI())
+                .build();
+
         return ResponseEntity.status(status).body(response);
     }
 }

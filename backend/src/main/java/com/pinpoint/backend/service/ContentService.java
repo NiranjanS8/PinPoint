@@ -1,23 +1,19 @@
 package com.pinpoint.backend.service;
 
-import com.pinpoint.backend.dto.request.AssignFolderRequest;
-import com.pinpoint.backend.dto.request.CreateContentRequest;
-import com.pinpoint.backend.entity.ContentType;
-import com.pinpoint.backend.dto.response.SavedContentResponse;
-
 import java.util.List;
+
+import com.pinpoint.backend.dto.AddContentRequest;
+import com.pinpoint.backend.dto.SavedContentResponse;
 
 public interface ContentService {
 
-    SavedContentResponse create(CreateContentRequest request);
+    SavedContentResponse addContent(AddContentRequest request);
 
-    List<SavedContentResponse> getAll(Long folderId, String search, String sort, Boolean pinned, ContentType contentType);
+    List<SavedContentResponse> getAllContent();
 
-    SavedContentResponse getById(Long id);
+    SavedContentResponse getContentById(Long id);
 
     SavedContentResponse togglePinned(Long id);
 
-    SavedContentResponse assignFolder(Long id, AssignFolderRequest request);
-
-    void delete(Long id);
+    void deleteContent(Long id);
 }
