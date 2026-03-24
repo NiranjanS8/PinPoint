@@ -1,0 +1,17 @@
+{
+  "name": "pinpoint-electron",
+  "version": "1.0.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "dev": "wait-on tcp:5173 tcp:9090 && electron .",
+    "start": "electron .",
+    "build": "node -e \"console.log('Electron shell is ready for packaging in a later phase.')\""
+  },
+  "dependencies": {
+    "electron": "^37.1.0"
+  },
+  "devDependencies": {
+    "wait-on": "^8.0.3"
+  }
+}

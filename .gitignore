@@ -1,0 +1,9 @@
+node_modules/
+dist/
+build/
+.idea/
+.vscode/
+target/
+backend/data/
+frontend/.vite/
+*.log
