@@ -24,7 +24,7 @@ export function ToastViewport() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="pointer-events-auto grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-2xl bg-panel px-4 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.22)] ring-1 ring-borderSoft animate-[toast-in_180ms_ease-out]"
+          className="pointer-events-auto grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-2xl bg-panel px-4 py-3 shadow-[0_18px_40px_rgba(0,0,0,0.26)] ring-1 ring-white/6 animate-[toast-in_180ms_ease-out]"
         >
           <div className={`mt-0.5 ${toneStyles[toast.tone].className}`}>{toneStyles[toast.tone].icon}</div>
           <div className="min-w-0">

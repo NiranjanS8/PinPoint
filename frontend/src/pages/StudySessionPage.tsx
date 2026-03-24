@@ -1,4 +1,4 @@
-import { Clock3, Plus, Play, X } from "lucide-react";
+import { Clock3, PauseCircle, Play, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../components/ui/PageHeader";
 import { PrimaryButton } from "../components/ui/PrimaryButton";
@@ -23,8 +23,12 @@ export function StudySessionPage() {
       return;
     }
 
+    if (sessionMessage === "Session paused") {
+      return;
+    }
+
     setRemainingSeconds(selectedDuration * 60);
-  }, [selectedDuration, isRunning]);
+  }, [selectedDuration, isRunning, sessionMessage]);
 
   useEffect(() => {
     if (!isRunning) {
@@ -48,6 +52,7 @@ export function StudySessionPage() {
   }, [isRunning]);
 
   const queuedContentIds = useMemo(() => new Set(studyQueue.map((item) => item.content.id)), [studyQueue]);
+  const isPaused = !isRunning && sessionMessage === "Session paused";
 
   function formatTime(totalSeconds: number) {
     const minutes = Math.floor(totalSeconds / 60);
@@ -99,26 +104,37 @@ export function StudySessionPage() {
   }
 
   function handleStartSession() {
-    if (remainingSeconds === 0) {
+    if (remainingSeconds === 0 || sessionMessage === "Session complete") {
       setRemainingSeconds(selectedDuration * 60);
     }
 
-    setIsRunning((current) => !current);
-    setSessionMessage((current) => {
-      if (remainingSeconds === 0) {
-        return "Focus mode in progress";
-      }
-
-      return current === "Ready to focus" || current === "Session complete"
-        ? "Focus mode in progress"
-        : current === "Focus mode in progress"
-          ? "Session paused"
-          : "Focus mode in progress";
-    });
+    setIsRunning(true);
+    setSessionMessage("Focus mode in progress");
     showToast({
       tone: "info",
-      title: isRunning ? "Session paused" : "Focus mode started",
-      description: isRunning ? "Your timer is paused." : `Timer set for ${selectedDuration} minutes.`
+      title: "Focus mode started",
+      description: `Timer set for ${selectedDuration} minutes.`
+    });
+  }
+
+  function handlePauseSession() {
+    setIsRunning(false);
+    setSessionMessage("Session paused");
+    showToast({
+      tone: "info",
+      title: "Session paused",
+      description: "Your timer is paused."
+    });
+  }
+
+  function handleResetSession() {
+    setIsRunning(false);
+    setRemainingSeconds(selectedDuration * 60);
+    setSessionMessage("Ready to focus");
+    showToast({
+      tone: "info",
+      title: "Session reset",
+      description: `Timer reset to ${selectedDuration} minutes.`
     });
   }
 
@@ -126,39 +142,75 @@ export function StudySessionPage() {
     <div>
       <PageHeader title="Study Session" subtitle="Focus mode with timer and video queue" />
 
-      <SectionCard className="mt-[34px] min-h-[418px]">
+      <SectionCard className="mt-7 min-h-[360px]">
         <div className="grid justify-items-center text-center">
           <Clock3 className="size-[42px] text-accentBlue" />
-          <div className="mt-[22px] text-[82px] font-bold leading-none tracking-[-0.05em] text-textStrong">
+          <div className="mt-[18px] text-[82px] font-bold leading-none tracking-[-0.05em] text-textStrong">
             {formatTime(remainingSeconds)}
           </div>
-          <p className="mt-3 text-[17px] text-textMuted">{sessionMessage}</p>
+          <div
+            className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[15px] ${
+              isPaused
+                ? "bg-[rgba(245,158,11,0.12)] text-[#fbbf24]"
+                : "bg-[var(--color-surface-soft)] text-textMuted"
+            }`}
+          >
+            {isPaused ? <PauseCircle className="size-4" /> : null}
+            <span>{sessionMessage}</span>
+          </div>
 
-          <div className="mt-[34px] flex items-center gap-4">
+          <div className="mt-7 grid justify-items-center gap-4">
             <TimerSelector value={selectedDuration} onChange={setSelectedDuration} />
-            <PrimaryButton className="min-w-[178px]" onClick={handleStartSession}>
-              <Play className="size-4 fill-current" />
-              {isRunning ? "Pause Session" : "Start Session"}
-            </PrimaryButton>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <PrimaryButton
+                className="min-h-[48px] min-w-[168px] rounded-2xl bg-accentBlue px-6 text-[15px] shadow-[0_2px_8px_rgba(0,0,0,0.18)] hover:brightness-105"
+                onClick={handleStartSession}
+                disabled={isRunning}
+              >
+                <Play className="size-4 fill-current" />
+                Start Session
+              </PrimaryButton>
+              <SecondaryButton
+                className="min-h-[48px] min-w-[136px] rounded-2xl px-5"
+                onClick={handlePauseSession}
+                disabled={!isRunning}
+              >
+                <PauseCircle className="size-4" />
+                Pause
+              </SecondaryButton>
+              <SecondaryButton className="min-h-[48px] min-w-[136px] rounded-2xl px-5" onClick={handleResetSession}>
+                Reset
+              </SecondaryButton>
+            </div>
           </div>
         </div>
       </SectionCard>
 
-      <div className="mt-[30px]">
+      <div className="mt-6">
         <SectionCard
           title={`Queue (${studyQueue.length})`}
           actions={
-            <SecondaryButton className="min-w-[148px]" onClick={openQueueDialog}>
-              <Plus className="size-4" />
-              Add Videos
-            </SecondaryButton>
+            studyQueue.length > 0 ? (
+              <SecondaryButton className="min-w-[148px]" onClick={openQueueDialog}>
+                <Plus className="size-4" />
+                Add Videos
+              </SecondaryButton>
+            ) : undefined
           }
-          className="min-h-[286px]"
+          className="min-h-[240px]"
         >
           {studyQueue.length === 0 ? (
-            <div className="grid min-h-[190px] place-items-center content-center gap-4 text-center">
-              <p className="m-0 text-[17px] text-textMuted">Your queue is empty</p>
-              <PrimaryButton onClick={openQueueDialog}>
+            <div className="grid min-h-[170px] place-items-center content-center gap-4 text-center">
+              <div className="grid gap-2">
+                <p className="m-0 text-[18px] font-semibold text-textStrong">Your queue is empty</p>
+                <p className="m-0 text-[15px] leading-6 text-textMuted">
+                  Add a few lessons to build a focused session and move through them without breaking context.
+                </p>
+              </div>
+              <PrimaryButton
+                onClick={openQueueDialog}
+                className="min-h-[48px] min-w-[188px] rounded-2xl bg-accentBlue px-5 text-[15px] shadow-[0_2px_8px_rgba(0,0,0,0.18)] hover:brightness-105"
+              >
                 <Plus className="size-4" />
                 Add Videos
               </PrimaryButton>

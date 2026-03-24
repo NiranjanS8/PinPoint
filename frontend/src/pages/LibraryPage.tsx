@@ -1,3 +1,4 @@
+import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { EmptyStateCard } from "../components/ui/EmptyStateCard";
@@ -19,6 +20,8 @@ export function LibraryPage() {
   const [search, setSearch] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sort, setSort] = useState<SortOption>("pinned");
+  const [continueLearningExpanded, setContinueLearningExpanded] = useState(false);
+  const [dismissedContinueLearningIds, setDismissedContinueLearningIds] = useState<string[]>([]);
   const [searchParams] = useSearchParams();
   const { videos, folders, folderTree, continueLearning, addQueueItem, loading, error } = useContent();
   const { showToast } = useToast();
@@ -64,9 +67,27 @@ export function LibraryPage() {
     });
   }, [videos, search, selectedTags, selectedFolderId, sort, visibleFolderIds]);
 
+  const visibleContinueLearning = useMemo(
+    () => continueLearning.filter((video) => !dismissedContinueLearningIds.includes(video.id)),
+    [continueLearning, dismissedContinueLearningIds]
+  );
+
   useEffect(() => {
     setActiveContentId(filteredVideos.length > 0 ? Number(filteredVideos[0].id) : null);
   }, [filteredVideos, setActiveContentId]);
+
+  useEffect(() => {
+    if (continueLearning.length === 0) {
+      setContinueLearningExpanded(false);
+      setDismissedContinueLearningIds([]);
+      return;
+    }
+
+    setContinueLearningExpanded(true);
+    setDismissedContinueLearningIds((current) =>
+      current.filter((id) => continueLearning.some((video) => video.id === id))
+    );
+  }, [continueLearning]);
 
   function toggleTag(tag: string) {
     setSelectedTags((current) =>
@@ -89,6 +110,15 @@ export function LibraryPage() {
         description: exception instanceof Error ? exception.message : "Unable to add this item to the study queue."
       });
     }
+  }
+
+  function handleDismissContinueLearning(video: VideoItem) {
+    setDismissedContinueLearningIds((current) => [...current, video.id]);
+    showToast({
+      tone: "info",
+      title: "Removed from Continue Learning",
+      description: video.title
+    });
   }
 
   return (
@@ -137,27 +167,47 @@ export function LibraryPage() {
         </div>
       </SectionCard>
 
-      {continueLearning.length > 0 ? (
+      {visibleContinueLearning.length > 0 ? (
         <section className="mt-7">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h2 className="m-0 text-[20px] font-semibold text-textStrong">Continue Learning</h2>
-              <p className="mt-1 text-[15px] text-textMuted">
-                Pick up where you left off with in-progress or recently opened content.
-              </p>
+              <button
+                type="button"
+                onClick={() => setContinueLearningExpanded((current) => !current)}
+                className="inline-flex items-center gap-2 rounded-xl text-left transition hover:text-textStrong"
+              >
+                {continueLearningExpanded ? (
+                  <ChevronDown className="size-5 text-textMuted" />
+                ) : (
+                  <ChevronRight className="size-5 text-textMuted" />
+                )}
+                <h2 className="m-0 text-[20px] font-semibold text-textStrong">Continue Learning</h2>
+              </button>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-5">
-            {continueLearning.slice(0, 3).map((video) => (
-              <VideoCard
-                key={video.id}
-                video={video}
-                variant="library"
-                highlightQuery={search}
-                onAddToQueue={handleAddToQueue}
-              />
-            ))}
-          </div>
+          {continueLearningExpanded ? (
+            <div className="grid grid-cols-3 gap-5">
+              {visibleContinueLearning.slice(0, 3).map((video) => (
+                <div key={video.id} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => handleDismissContinueLearning(video)}
+                    className="absolute right-3 top-3 z-10 inline-flex size-8 items-center justify-center rounded-xl bg-[rgba(15,17,21,0.72)] text-white/80 transition hover:bg-[rgba(15,17,21,0.9)] hover:text-white"
+                    aria-label="Remove from Continue Learning"
+                    title="Remove from Continue Learning"
+                  >
+                    <X className="size-4" />
+                  </button>
+                  <VideoCard
+                    video={video}
+                    variant="library"
+                    highlightQuery={search}
+                    onAddToQueue={handleAddToQueue}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : null}
         </section>
       ) : null}
 
