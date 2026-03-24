@@ -1,9 +1,14 @@
 import { FolderOpen, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState, type PropsWithChildren } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "../components/sidebar/AppSidebar";
+import { CommandPalette } from "../components/ui/CommandPalette";
 import { PrimaryButton } from "../components/ui/PrimaryButton";
 import { SecondaryButton } from "../components/ui/SecondaryButton";
+import { ToastViewport } from "../components/ui/ToastViewport";
 import { useContent } from "../context/ContentContext";
+import { useToast } from "../context/ToastContext";
+import { useWorkspaceUi } from "../context/WorkspaceUiContext";
 
 export function AppLayout({ children }: PropsWithChildren) {
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -17,19 +22,139 @@ export function AppLayout({ children }: PropsWithChildren) {
 
     return window.localStorage.getItem("pinpoint-theme") === "dark";
   });
-  const { addContent } = useContent();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { addContent, items, pinContent, removeContent, addQueueItem } = useContent();
+  const { showToast } = useToast();
+  const { activeContentId, isCommandPaletteOpen, openCommandPalette, closeCommandPalette } = useWorkspaceUi();
+
+  const activeContent = items.find((item) => item.id === activeContentId) ?? null;
 
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        setShowAddDialog(true);
+        openCommandPalette();
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      const isTypingTarget =
+        !!target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+
+      if (showAddDialog || isCommandPaletteOpen || isTypingTarget) {
+        return;
+      }
+
+      if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        navigate("/study-session");
+        return;
+      }
+
+      if (event.key === "Enter" && activeContent) {
+        event.preventDefault();
+        navigate(`/content/${activeContent.id}`);
+        return;
+      }
+
+      if (!activeContent) {
+        return;
+      }
+
+      if (event.key.toLowerCase() === "p") {
+        event.preventDefault();
+        void pinContent(activeContent.id)
+          .then((updated) => {
+            showToast({
+              tone: "success",
+              title: updated.pinned ? "Pinned" : "Unpinned",
+              description: updated.title
+            });
+          })
+          .catch((exception) => {
+            showToast({
+              tone: "error",
+              title: "Pin action failed",
+              description: exception instanceof Error ? exception.message : "Unable to update content."
+            });
+          });
+        return;
+      }
+
+      if (event.key.toLowerCase() === "q") {
+        event.preventDefault();
+        void addQueueItem(activeContent.id)
+          .then(() => {
+            showToast({
+              tone: "success",
+              title: "Added to queue",
+              description: activeContent.title
+            });
+          })
+          .catch((exception) => {
+            showToast({
+              tone: "error",
+              title: "Queue action failed",
+              description: exception instanceof Error ? exception.message : "Unable to update the study queue."
+            });
+          });
+        return;
+      }
+
+      if (event.key === "Delete") {
+        event.preventDefault();
+        const confirmed = window.confirm(`Delete "${activeContent.title}"?`);
+        if (!confirmed) {
+          return;
+        }
+
+        void removeContent(activeContent.id)
+          .then(() => {
+            showToast({
+              tone: "success",
+              title: "Deleted",
+              description: activeContent.title
+            });
+            if (location.pathname.startsWith("/content/")) {
+              navigate("/");
+            }
+          })
+          .catch((exception) => {
+            showToast({
+              tone: "error",
+              title: "Delete failed",
+              description: exception instanceof Error ? exception.message : "Unable to remove content."
+            });
+          });
+        return;
+      }
+
+      if (event.code === "Space" && location.pathname.startsWith("/content/")) {
+        event.preventDefault();
+        window.dispatchEvent(new CustomEvent("pinpoint:content-play-toggle"));
       }
     };
 
     window.addEventListener("keydown", handleKeydown);
     return () => window.removeEventListener("keydown", handleKeydown);
-  }, []);
+  }, [
+    activeContent,
+    addQueueItem,
+    closeCommandPalette,
+    isCommandPaletteOpen,
+    location.pathname,
+    navigate,
+    openCommandPalette,
+    pinContent,
+    removeContent,
+    showAddDialog,
+    showToast
+  ]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = isDarkMode ? "dark" : "light";
@@ -63,14 +188,25 @@ export function AppLayout({ children }: PropsWithChildren) {
       await addContent(trimmedUrl);
       setVideoUrl("");
       setShowAddDialog(false);
+      showToast({
+        tone: "success",
+        title: "Video added",
+        description: "Your content is now available in Library."
+      });
     } catch (exception) {
       setSubmitError(exception instanceof Error ? exception.message : "Failed to save content.");
+      showToast({
+        tone: "error",
+        title: "Unable to add content",
+        description: exception instanceof Error ? exception.message : "Failed to save content."
+      });
     } finally {
       setSubmitting(false);
     }
   }
 
   function openAddDialog() {
+    closeCommandPalette();
     setSubmitError(null);
     setShowAddDialog(true);
   }
@@ -92,7 +228,7 @@ export function AppLayout({ children }: PropsWithChildren) {
         onToggleDarkMode={() => setIsDarkMode((current) => !current)}
         isDarkMode={isDarkMode}
       />
-      <main className="app-scrollbar flex-1 h-screen overflow-y-auto overflow-x-hidden px-11 py-10">
+      <main className="app-scrollbar flex-1 h-screen overflow-y-auto overflow-x-hidden px-9 py-8">
         {children}
       </main>
 
@@ -150,6 +286,9 @@ export function AppLayout({ children }: PropsWithChildren) {
           </div>
         </div>
       ) : null}
+
+      <CommandPalette open={isCommandPaletteOpen} onClose={closeCommandPalette} onOpenAddVideo={openAddDialog} />
+      <ToastViewport />
 
       <div className="hidden">
         <FolderOpen />

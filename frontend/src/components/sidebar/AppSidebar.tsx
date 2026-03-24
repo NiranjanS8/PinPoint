@@ -2,6 +2,7 @@ import { Archive, BarChart3, Clock3, Folder, FolderPlus, Library, Moon, Plus } f
 import { useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useContent } from "../../context/ContentContext";
+import { useToast } from "../../context/ToastContext";
 import type { FolderTreeItem } from "../../types/workspace";
 import { PrimaryButton } from "../ui/PrimaryButton";
 import { SecondaryButton } from "../ui/SecondaryButton";
@@ -36,6 +37,7 @@ export function AppSidebar({
   const location = useLocation();
   const navigate = useNavigate();
   const { folderTree, createFolder, renameFolder, removeFolder } = useContent();
+  const { showToast } = useToast();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [dialogState, setDialogState] = useState<FolderDialogState>(null);
 
@@ -105,9 +107,22 @@ export function AppSidebar({
       return;
     }
 
-    await removeFolder(Number(folder.id));
-    if (selectedFolderId && folderContainsId(folder, selectedFolderId)) {
-      navigate("/");
+    try {
+      await removeFolder(Number(folder.id));
+      showToast({
+        tone: "success",
+        title: "Folder deleted",
+        description: folder.name
+      });
+      if (selectedFolderId && folderContainsId(folder, selectedFolderId)) {
+        navigate("/");
+      }
+    } catch (exception) {
+      showToast({
+        tone: "error",
+        title: "Unable to delete folder",
+        description: exception instanceof Error ? exception.message : "Please try again."
+      });
     }
   }
 
@@ -118,10 +133,20 @@ export function AppSidebar({
 
     if (dialogState.mode === "create") {
       await createFolder(name, dialogState.parentId);
+      showToast({
+        tone: "success",
+        title: "Folder created",
+        description: name
+      });
       return;
     }
 
     await renameFolder(dialogState.folderId, name, dialogState.parentId);
+    showToast({
+      tone: "success",
+      title: "Folder updated",
+      description: name
+    });
   }
 
   return (
@@ -163,7 +188,7 @@ export function AppSidebar({
               <button
                 type="button"
                 onClick={handleCreateRootFolder}
-                className="inline-flex size-8 items-center justify-center rounded-xl bg-[var(--color-surface-soft)] text-textMuted transition hover:bg-mutedPanel hover:text-textStrong"
+                className="inline-flex size-9 items-center justify-center rounded-xl bg-navy text-white shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_6px_18px_rgba(0,0,0,0.18)] transition duration-150 hover:-translate-y-[1px] hover:brightness-105"
                 aria-label="Create folder"
               >
                 <FolderPlus className="size-4" />

@@ -1,6 +1,8 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ContentProvider } from "../context/ContentContext";
+import { ToastProvider } from "../context/ToastContext";
+import { WorkspaceUiProvider } from "../context/WorkspaceUiContext";
 import { AppLayout } from "../layouts/AppLayout";
 import { MiniPlayerPage } from "../pages/MiniPlayerPage";
 
@@ -80,17 +82,21 @@ export function App() {
   }
 
   return (
-    <ContentProvider>
-      {windowContext.windowType === "mini-player" ? (
-        <MiniPlayerPage
-          initialContentId={windowContext.contentId}
-          initialAlwaysOnTop={windowContext.alwaysOnTop}
-        />
-      ) : (
-        <AppLayout>
-          <Outlet />
-        </AppLayout>
-      )}
-    </ContentProvider>
+    <ToastProvider>
+      <WorkspaceUiProvider>
+        <ContentProvider>
+          {windowContext.windowType === "mini-player" ? (
+            <MiniPlayerPage
+              initialContentId={windowContext.contentId}
+              initialAlwaysOnTop={windowContext.alwaysOnTop}
+            />
+          ) : (
+            <AppLayout>
+              <Outlet />
+            </AppLayout>
+          )}
+        </ContentProvider>
+      </WorkspaceUiProvider>
+    </ToastProvider>
   );
 }

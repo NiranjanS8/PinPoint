@@ -1,13 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { EmptyStateCard } from "../components/ui/EmptyStateCard";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SearchBar } from "../components/ui/SearchBar";
+import { SkeletonCard } from "../components/ui/SkeletonCard";
 import { SectionCard } from "../components/ui/SectionCard";
 import { TagPill } from "../components/ui/TagPill";
 import { VideoCard } from "../components/ui/VideoCard";
 import { useContent } from "../context/ContentContext";
+import { useToast } from "../context/ToastContext";
+import { useWorkspaceUi } from "../context/WorkspaceUiContext";
 import type { FolderTreeItem, VideoItem } from "../types/workspace";
+import { getContentSearchScore } from "../utils/search";
 
 type SortOption = "pinned" | "newest" | "oldest" | "alphabetical";
 
@@ -17,6 +21,8 @@ export function LibraryPage() {
   const [sort, setSort] = useState<SortOption>("pinned");
   const [searchParams] = useSearchParams();
   const { videos, folders, folderTree, continueLearning, addQueueItem, loading, error } = useContent();
+  const { showToast } = useToast();
+  const { setActiveContentId } = useWorkspaceUi();
 
   const selectedFolderId = searchParams.get("folderId");
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId) ?? null;
@@ -38,23 +44,51 @@ export function LibraryPage() {
   const filteredVideos = useMemo(() => {
     const searchedVideos = videos.filter((video) => {
       const matchesFolder = !visibleFolderIds || (video.folderId !== null && visibleFolderIds.has(video.folderId));
-      const matchesSearch =
-        search.trim().length === 0 ||
-        video.title.toLowerCase().includes(search.toLowerCase()) ||
-        video.channel.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = search.trim().length === 0 || getContentSearchScore(search, video.title, video.channel) >= 0;
       const matchesTags =
         selectedTags.length === 0 || selectedTags.every((tag) => video.tags.includes(tag));
 
       return matchesFolder && matchesSearch && matchesTags;
     });
 
-    return [...searchedVideos].sort((left, right) => compareVideos(left, right, sort));
-  }, [videos, search, selectedTags, selectedFolderId, sort]);
+    return [...searchedVideos].sort((left, right) => {
+      if (search.trim().length > 0) {
+        const rightScore = getContentSearchScore(search, right.title, right.channel);
+        const leftScore = getContentSearchScore(search, left.title, left.channel);
+        if (leftScore !== rightScore) {
+          return rightScore - leftScore;
+        }
+      }
+
+      return compareVideos(left, right, sort);
+    });
+  }, [videos, search, selectedTags, selectedFolderId, sort, visibleFolderIds]);
+
+  useEffect(() => {
+    setActiveContentId(filteredVideos.length > 0 ? Number(filteredVideos[0].id) : null);
+  }, [filteredVideos, setActiveContentId]);
 
   function toggleTag(tag: string) {
     setSelectedTags((current) =>
       current.includes(tag) ? current.filter((value) => value !== tag) : [...current, tag]
     );
+  }
+
+  async function handleAddToQueue(video: VideoItem) {
+    try {
+      await addQueueItem(Number(video.id));
+      showToast({
+        tone: "success",
+        title: "Added to queue",
+        description: video.title
+      });
+    } catch (exception) {
+      showToast({
+        tone: "error",
+        title: "Queue action failed",
+        description: exception instanceof Error ? exception.message : "Unable to add this item to the study queue."
+      });
+    }
   }
 
   return (
@@ -68,43 +102,43 @@ export function LibraryPage() {
         }
       />
 
-      <SectionCard className="mt-[34px] p-7">
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <SearchBar value={search} onChange={setSearch} />
+      <SectionCard className="mt-[28px] p-6">
+        <div className="grid gap-5">
+          <div className="grid grid-cols-[minmax(0,1fr)_180px] items-center gap-4">
+            <SearchBar value={search} onChange={setSearch} className="min-h-[50px]" />
+            <select
+              value={sort}
+              onChange={(event) => setSort(event.target.value as SortOption)}
+              className="min-h-[50px] rounded-[14px] bg-[var(--color-surface-soft)] px-4 text-[15px] text-textStrong outline-none transition hover:bg-mutedPanel"
+            >
+              <option value="pinned">Pinned First</option>
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="alphabetical">Alphabetical</option>
+            </select>
           </div>
-          <select
-            value={sort}
-            onChange={(event) => setSort(event.target.value as SortOption)}
-            className="min-h-12 rounded-[14px] bg-[var(--color-surface-soft)] px-4 text-[15px] text-textStrong outline-none"
-          >
-            <option value="pinned">Pinned First</option>
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="alphabetical">Alphabetical</option>
-          </select>
-        </div>
 
-        <div className="mt-6">
-          <div className="mb-3.5 flex items-center gap-3">
+          <div className="grid gap-3">
+            <div className="flex items-center gap-3">
             <p className="m-0 text-[16px] text-textMuted">Filter by tags:</p>
             {selectedFolder ? <TagPill staticStyle>{selectedFolder.name}</TagPill> : null}
-          </div>
-          <p className="mb-3.5 text-[14px] text-textMuted">
-            Combine tags to narrow the library to the exact topics you want to study next.
-          </p>
-          <div className="flex flex-wrap gap-2.5">
-            {libraryTags.map((tag) => (
-              <TagPill key={tag} selected={selectedTags.includes(tag)} onClick={() => toggleTag(tag)}>
-                {tag}
-              </TagPill>
-            ))}
+            </div>
+            <p className="text-[13px] text-textMuted">
+              Tip: combine tags and fuzzy search to quickly narrow the next lesson you want to work on.
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              {libraryTags.map((tag) => (
+                <TagPill key={tag} selected={selectedTags.includes(tag)} onClick={() => toggleTag(tag)}>
+                  {tag}
+                </TagPill>
+              ))}
+            </div>
           </div>
         </div>
       </SectionCard>
 
       {continueLearning.length > 0 ? (
-        <section className="mt-[30px]">
+        <section className="mt-7">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="m-0 text-[20px] font-semibold text-textStrong">Continue Learning</h2>
@@ -115,23 +149,41 @@ export function LibraryPage() {
           </div>
           <div className="grid grid-cols-3 gap-5">
             {continueLearning.slice(0, 3).map((video) => (
-              <VideoCard key={video.id} video={video} variant="library" />
+              <VideoCard
+                key={video.id}
+                video={video}
+                variant="library"
+                highlightQuery={search}
+                onAddToQueue={handleAddToQueue}
+              />
             ))}
           </div>
         </section>
       ) : null}
 
-      <p className="mb-[22px] mt-[30px] text-[16px] text-textMuted">
+      <p className="mb-4 mt-7 text-[15px] text-textMuted">
         Showing {filteredVideos.length} of {videos.length} items
       </p>
 
-      {loading ? <p className="text-[16px] text-textMuted">Loading your library...</p> : null}
-      {!loading && error ? <p className="text-[16px] text-[#b42318]">{error}</p> : null}
+      {loading ? (
+        <div className="grid grid-cols-3 gap-5">
+          <SkeletonCard compact />
+          <SkeletonCard compact />
+          <SkeletonCard compact />
+        </div>
+      ) : null}
+      {!loading && error ? (
+        <EmptyStateCard
+          icon={<span className="text-[42px]">!</span>}
+          title="We couldn't load your library"
+          description={error}
+        />
+      ) : null}
       {!loading && !error && videos.length === 0 ? (
         <EmptyStateCard
           icon={<span className="text-[42px]">+</span>}
           title="No content in your library yet"
-          description="Add your first YouTube video or playlist to start building a study-ready library."
+          description="Paste a YouTube link to start building a focused learning library for your current topics."
         />
       ) : null}
       {!loading && !error && videos.length > 0 && filteredVideos.length === 0 ? (
@@ -140,15 +192,21 @@ export function LibraryPage() {
           title={selectedFolder ? "No content in this folder" : "No matching content"}
           description={
             selectedFolder
-              ? "Move content into this folder or clear the active filters."
-              : "Try a different search term or remove one of the selected tag filters."
+              ? "Move content into this folder, clear a tag, or try a broader search."
+              : "Try a broader search term, remove one of the active tags, or change the sort."
           }
         />
       ) : null}
       {!loading && !error && filteredVideos.length > 0 ? (
         <div className="grid grid-cols-3 gap-5">
           {filteredVideos.map((video) => (
-            <VideoCard key={video.id} video={video} variant="library" />
+            <VideoCard
+              key={video.id}
+              video={video}
+              variant="library"
+              highlightQuery={search}
+              onAddToQueue={handleAddToQueue}
+            />
           ))}
         </div>
       ) : null}

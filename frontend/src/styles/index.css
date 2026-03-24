@@ -7,7 +7,7 @@
   --color-muted-panel: #f3f3f5;
   --color-border-soft: rgba(0, 0, 0, 0.06);
   --color-text-strong: #101828;
-  --color-text-muted: #667085;
+  --color-text-muted: #596377;
   --color-navy: #131522;
   --color-accent-blue: #3b82f6;
   --color-accent-green: #22c55e;
@@ -49,7 +49,7 @@ body {
   --color-muted-panel: #22262d;
   --color-border-soft: rgba(255, 255, 255, 0.05);
   --color-text-strong: #f5f7fa;
-  --color-text-muted: #aab3c2;
+  --color-text-muted: #b8c0cc;
   --color-navy: #2f3742;
   --color-surface-soft: #20242b;
   --color-surface-muted: #262b33;
@@ -79,4 +79,25 @@ button {
 
 :root[data-theme="dark"] .app-scrollbar::-webkit-scrollbar-thumb {
   background: #343a44;
+}
+
+.command-palette-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.command-palette-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }

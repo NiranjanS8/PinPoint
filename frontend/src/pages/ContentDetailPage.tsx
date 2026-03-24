@@ -7,14 +7,7 @@ import {
   StickyNote,
   Trash2
 } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode
-} from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { YouTubePlayer } from "../components/content/YouTubePlayer";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -23,8 +16,10 @@ import { SecondaryButton } from "../components/ui/SecondaryButton";
 import { SectionCard } from "../components/ui/SectionCard";
 import { TagPill } from "../components/ui/TagPill";
 import { useContent } from "../context/ContentContext";
+import { useToast } from "../context/ToastContext";
+import { useWorkspaceUi } from "../context/WorkspaceUiContext";
 import { fetchContentById } from "../services/contentApi";
-import type { LearningStatus, SavedContentDto } from "../types/api";
+import type { SavedContentDto } from "../types/api";
 
 type DetailTab = "notes" | "queue" | "details";
 
@@ -37,13 +32,14 @@ export function ContentDetailPage() {
     studyQueue,
     pinContent,
     updateWorkflow,
-    updatePlaybackProgress,
     markOpened,
     addQueueItem,
     removeQueueItem,
     assignFolder,
     removeContent
   } = useContent();
+  const { showToast } = useToast();
+  const { setActiveContentId } = useWorkspaceUi();
 
   const [content, setContent] = useState<SavedContentDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,31 +48,20 @@ export function ContentDetailPage() {
   const [processing, setProcessing] = useState(false);
   const [showPlayer, setShowPlayer] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>("notes");
-  const [progressPercent, setProgressPercent] = useState(0);
   const [notes, setNotes] = useState("");
   const openedRef = useRef(false);
   const notesHydratedRef = useRef(false);
-  const contentRef = useRef<SavedContentDto | null>(null);
-  const progressRef = useRef(0);
-  const lastPlaybackPersistRef = useRef<{ seconds: number; progressPercent: number } | null>(null);
-  const playbackPersistingRef = useRef(false);
-  const playbackPersistAtRef = useRef(0);
 
   useEffect(() => {
     openedRef.current = false;
     notesHydratedRef.current = false;
-    lastPlaybackPersistRef.current = null;
-    contentRef.current = null;
     setShowPlayer(false);
   }, [id]);
 
   useEffect(() => {
-    contentRef.current = content;
-  }, [content]);
-
-  useEffect(() => {
-    progressRef.current = progressPercent;
-  }, [progressPercent]);
+    setActiveContentId(content ? content.id : null);
+    return () => setActiveContentId(null);
+  }, [content, setActiveContentId]);
 
   useEffect(() => {
     async function loadContentDetail() {
@@ -118,7 +103,7 @@ export function ContentDetailPage() {
       openedRef.current = true;
       try {
         const updated = await markOpened(content.id);
-        applyContentUpdate(updated, { preserveNotes: true, preserveProgress: true });
+        applyContentUpdate(updated, { preserveNotes: true });
       } catch {
         // Keep detail usable even if open tracking fails.
       }
@@ -139,7 +124,7 @@ export function ContentDetailPage() {
     const timer = window.setTimeout(async () => {
       try {
         const updated = await updateWorkflow(content.id, { notes });
-        applyContentUpdate(updated, { preserveNotes: true, preserveProgress: true });
+        applyContentUpdate(updated, { preserveNotes: true });
       } catch (exception) {
         setActionError(exception instanceof Error ? exception.message : "Failed to save notes.");
       }
@@ -147,6 +132,15 @@ export function ContentDetailPage() {
 
     return () => window.clearTimeout(timer);
   }, [content, notes, updateWorkflow]);
+
+  useEffect(() => {
+    const handlePlayToggle = () => {
+      setShowPlayer((current) => (current ? current : true));
+    };
+
+    window.addEventListener("pinpoint:content-play-toggle", handlePlayToggle as EventListener);
+    return () => window.removeEventListener("pinpoint:content-play-toggle", handlePlayToggle as EventListener);
+  }, []);
 
   const playerSource = useMemo(() => {
     if (!content) {
@@ -165,124 +159,16 @@ export function ContentDetailPage() {
 
   function hydrateContent(item: SavedContentDto) {
     setContent(item);
-    setProgressPercent(item.progressPercent);
     setNotes(item.notes ?? "");
     notesHydratedRef.current = true;
-    contentRef.current = item;
-    progressRef.current = item.progressPercent;
-    lastPlaybackPersistRef.current = {
-      seconds: item.lastPlaybackSeconds ?? 0,
-      progressPercent: item.progressPercent
-    };
   }
 
-  function applyContentUpdate(
-    item: SavedContentDto,
-    options: { preserveNotes?: boolean; preserveProgress?: boolean } = {}
-  ) {
+  function applyContentUpdate(item: SavedContentDto, options: { preserveNotes?: boolean } = {}) {
     setContent(item);
-    contentRef.current = item;
-
-    if (!options.preserveProgress) {
-      setProgressPercent(item.progressPercent);
-      progressRef.current = item.progressPercent;
-      lastPlaybackPersistRef.current = {
-        seconds: item.lastPlaybackSeconds ?? 0,
-        progressPercent: item.progressPercent
-      };
-    }
-
     if (!options.preserveNotes) {
       setNotes(item.notes ?? "");
     }
   }
-
-  const persistPlayback = useCallback(
-    async (seconds: number, duration: number) => {
-      const currentContent = contentRef.current;
-      if (!currentContent || duration <= 0 || playbackPersistingRef.current) {
-        return;
-      }
-
-      const nextProgress = Math.min(100, Math.max(1, Math.round((seconds / duration) * 100)));
-      const normalizedProgress = nextProgress >= 98 ? 100 : nextProgress;
-      const normalizedSeconds = Math.max(0, Math.floor(seconds));
-      const previous = lastPlaybackPersistRef.current;
-      const now = Date.now();
-
-      if (
-        previous &&
-        normalizedProgress === previous.progressPercent &&
-        Math.abs(normalizedSeconds - previous.seconds) < 5
-      ) {
-        return;
-      }
-
-      if (now - playbackPersistAtRef.current < 5000) {
-        return;
-      }
-
-      playbackPersistAtRef.current = now;
-      playbackPersistingRef.current = true;
-
-      try {
-        const updated = await updatePlaybackProgress(currentContent.id, {
-          progressPercent: normalizedProgress,
-          status: normalizedProgress >= 100 ? "COMPLETED" : "IN_PROGRESS",
-          lastPlaybackSeconds: normalizedSeconds
-        });
-
-        setProgressPercent(normalizedProgress);
-        progressRef.current = normalizedProgress;
-        applyContentUpdate(updated, { preserveNotes: true, preserveProgress: true });
-        lastPlaybackPersistRef.current = {
-          seconds: normalizedSeconds,
-          progressPercent: normalizedProgress
-        };
-      } catch (exception) {
-        setActionError(exception instanceof Error ? exception.message : "Failed to sync playback progress.");
-      } finally {
-        playbackPersistingRef.current = false;
-      }
-    },
-    [updatePlaybackProgress]
-  );
-
-  const handlePlayerProgress = useCallback(
-    (seconds: number, duration: number) => {
-      if (duration <= 0) {
-        return;
-      }
-
-      const nextProgress = Math.min(100, Math.max(1, Math.round((seconds / duration) * 100)));
-      setProgressPercent(nextProgress >= 98 ? 100 : nextProgress);
-      void persistPlayback(seconds, duration);
-    },
-    [persistPlayback]
-  );
-
-  const handlePlaybackEnded = useCallback(async () => {
-    const currentContent = contentRef.current;
-    if (!currentContent) {
-      return;
-    }
-
-    try {
-      const updated = await updatePlaybackProgress(currentContent.id, {
-        progressPercent: 100,
-        status: "COMPLETED",
-        lastPlaybackSeconds: currentContent.lastPlaybackSeconds ?? 0
-      });
-      setProgressPercent(100);
-      applyContentUpdate(updated, { preserveNotes: true, preserveProgress: true });
-      lastPlaybackPersistRef.current = {
-        seconds: updated.lastPlaybackSeconds ?? currentContent.lastPlaybackSeconds ?? 0,
-        progressPercent: 100
-      };
-    } catch (exception) {
-      setActionError(exception instanceof Error ? exception.message : "Failed to complete playback progress.");
-    }
-  }, [updatePlaybackProgress]);
 
   function handlePlay() {
     setShowPlayer(true);
@@ -299,9 +185,19 @@ export function ContentDetailPage() {
 
     try {
       const updated = await pinContent(content.id);
-      applyContentUpdate(updated, { preserveNotes: true, preserveProgress: true });
+      applyContentUpdate(updated, { preserveNotes: true });
+      showToast({
+        tone: "success",
+        title: updated.pinned ? "Pinned" : "Unpinned",
+        description: updated.title
+      });
     } catch (exception) {
       setActionError(exception instanceof Error ? exception.message : "Failed to update content.");
+      showToast({
+        tone: "error",
+        title: "Pin action failed",
+        description: exception instanceof Error ? exception.message : "Failed to update content."
+      });
     } finally {
       setProcessing(false);
     }
@@ -322,9 +218,19 @@ export function ContentDetailPage() {
 
     try {
       await removeContent(content.id);
+      showToast({
+        tone: "success",
+        title: "Deleted",
+        description: content.title
+      });
       navigate("/");
     } catch (exception) {
       setActionError(exception instanceof Error ? exception.message : "Failed to delete content.");
+      showToast({
+        tone: "error",
+        title: "Delete failed",
+        description: exception instanceof Error ? exception.message : "Failed to delete content."
+      });
       setProcessing(false);
     }
   }
@@ -339,9 +245,19 @@ export function ContentDetailPage() {
 
     try {
       const updated = await assignFolder(content.id, folderId.length > 0 ? Number(folderId) : null);
-      applyContentUpdate(updated, { preserveNotes: true, preserveProgress: true });
+      applyContentUpdate(updated, { preserveNotes: true });
+      showToast({
+        tone: "success",
+        title: "Folder updated",
+        description: updated.folderName ?? "Content is now unassigned."
+      });
     } catch (exception) {
       setActionError(exception instanceof Error ? exception.message : "Failed to move content.");
+      showToast({
+        tone: "error",
+        title: "Folder update failed",
+        description: exception instanceof Error ? exception.message : "Failed to move content."
+      });
     } finally {
       setProcessing(false);
     }
@@ -358,8 +274,18 @@ export function ContentDetailPage() {
     try {
       await addQueueItem(content.id);
       setActiveTab("queue");
+      showToast({
+        tone: "success",
+        title: "Added to queue",
+        description: content.title
+      });
     } catch (exception) {
       setActionError(exception instanceof Error ? exception.message : "Failed to add content to queue.");
+      showToast({
+        tone: "error",
+        title: "Queue action failed",
+        description: exception instanceof Error ? exception.message : "Failed to add content to queue."
+      });
     } finally {
       setProcessing(false);
     }
@@ -370,14 +296,26 @@ export function ContentDetailPage() {
       return;
     }
 
+    const currentTitle = content?.title ?? "Content";
+
     setProcessing(true);
     setActionError(null);
 
     try {
       await removeQueueItem(Number(queueEntry.id));
       setActiveTab("queue");
+      showToast({
+        tone: "info",
+        title: "Removed from queue",
+        description: currentTitle
+      });
     } catch (exception) {
       setActionError(exception instanceof Error ? exception.message : "Failed to remove content from queue.");
+      showToast({
+        tone: "error",
+        title: "Queue action failed",
+        description: exception instanceof Error ? exception.message : "Failed to remove content from queue."
+      });
     } finally {
       setProcessing(false);
     }
@@ -420,12 +358,7 @@ export function ContentDetailPage() {
           <SectionCard className="overflow-hidden p-0">
             {showPlayer && playerSource ? (
               <div className="aspect-video w-full overflow-hidden bg-[#07090d]">
-                <YouTubePlayer
-                  source={playerSource}
-                  autoplay
-                  onProgress={handlePlayerProgress}
-                  onEnded={handlePlaybackEnded}
-                />
+                <YouTubePlayer source={playerSource} autoplay />
               </div>
             ) : (
               <button

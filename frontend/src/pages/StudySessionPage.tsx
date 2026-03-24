@@ -6,9 +6,11 @@ import { SecondaryButton } from "../components/ui/SecondaryButton";
 import { SectionCard } from "../components/ui/SectionCard";
 import { TimerSelector } from "../components/ui/TimerSelector";
 import { useContent } from "../context/ContentContext";
+import { useToast } from "../context/ToastContext";
 
 export function StudySessionPage() {
   const { videos, studyQueue, addQueueItem, removeQueueItem } = useContent();
+  const { showToast } = useToast();
   const [selectedDuration, setSelectedDuration] = useState(25);
   const [remainingSeconds, setRemainingSeconds] = useState(selectedDuration * 60);
   const [isRunning, setIsRunning] = useState(false);
@@ -79,11 +81,21 @@ export function StudySessionPage() {
       ...toRemove.map((item) => removeQueueItem(Number(item.id)))
     ]);
 
+    showToast({
+      tone: "success",
+      title: "Queue updated",
+      description: `${pendingSelection.length} item${pendingSelection.length === 1 ? "" : "s"} ready for study.`
+    });
     setShowQueueDialog(false);
   }
 
   async function handleRemoveFromQueue(queueItemId: string) {
     await removeQueueItem(Number(queueItemId));
+    showToast({
+      tone: "info",
+      title: "Removed from queue",
+      description: "The item was removed from this study session."
+    });
   }
 
   function handleStartSession() {
@@ -102,6 +114,11 @@ export function StudySessionPage() {
         : current === "Focus mode in progress"
           ? "Session paused"
           : "Focus mode in progress";
+    });
+    showToast({
+      tone: "info",
+      title: isRunning ? "Session paused" : "Focus mode started",
+      description: isRunning ? "Your timer is paused." : `Timer set for ${selectedDuration} minutes.`
     });
   }
 

@@ -97,7 +97,22 @@ export function YouTubePlayer({
   const hostRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YT.Player | null>(null);
   const progressTimerRef = useRef<number | null>(null);
+  const onProgressRef = useRef(onProgress);
+  const onEndedRef = useRef(onEnded);
   const [playerError, setPlayerError] = useState(false);
+
+  useEffect(() => {
+    onProgressRef.current = onProgress;
+  }, [onProgress]);
+
+  useEffect(() => {
+    onEndedRef.current = onEnded;
+  }, [onEnded]);
+
+  const sourceType = source.type;
+  const sourceVideoId = source.type === "video" ? source.videoId : null;
+  const sourceListId = source.type === "playlist" ? source.listId : null;
+  const initialStartSecondsRef = useRef(startSeconds);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,11 +136,11 @@ export function YouTubePlayer({
           rel: 0,
           modestbranding: 1,
           playsinline: 1,
-          ...(startSeconds > 0 ? { start: startSeconds } : {}),
-          ...(source.type === "playlist"
+          ...(initialStartSecondsRef.current > 0 ? { start: initialStartSecondsRef.current } : {}),
+          ...(sourceType === "playlist" && sourceListId
             ? {
                 listType: "playlist",
-                list: source.listId
+                list: sourceListId
               }
             : {})
         },
@@ -146,7 +161,7 @@ export function YouTubePlayer({
                   return;
                 }
 
-                onProgress?.(playerRef.current.getCurrentTime(), playerRef.current.getDuration());
+                onProgressRef.current?.(playerRef.current.getCurrentTime(), playerRef.current.getDuration());
               }, 5000);
             } else {
               if (progressTimerRef.current) {
@@ -155,11 +170,11 @@ export function YouTubePlayer({
               }
 
               if (playerRef.current) {
-                onProgress?.(playerRef.current.getCurrentTime(), playerRef.current.getDuration());
+                onProgressRef.current?.(playerRef.current.getCurrentTime(), playerRef.current.getDuration());
               }
 
               if (event.data === YTApi.PlayerState.ENDED) {
-                onEnded?.();
+                onEndedRef.current?.();
               }
             }
           },
@@ -191,7 +206,7 @@ export function YouTubePlayer({
         }
       }
     };
-  }, [autoplay, onEnded, onProgress, source, startSeconds]);
+  }, [autoplay, sourceType, sourceVideoId, sourceListId]);
 
   if (playerError) {
     return (

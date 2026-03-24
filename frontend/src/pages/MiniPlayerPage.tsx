@@ -5,7 +5,7 @@ import {
   SquareArrowOutUpRight,
   X
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useContent } from "../context/ContentContext";
 import { fetchContentById } from "../services/contentApi";
 import { SecondaryButton } from "../components/ui/SecondaryButton";
@@ -19,16 +19,12 @@ export function MiniPlayerPage({
   initialContentId: number | null;
   initialAlwaysOnTop: boolean;
 }) {
-  const { studyQueue, updatePlaybackProgress } = useContent();
+  const { studyQueue } = useContent();
   const [contentId, setContentId] = useState<number | null>(initialContentId);
   const [content, setContent] = useState<SavedContentDto | null>(null);
   const [alwaysOnTop, setAlwaysOnTop] = useState(initialAlwaysOnTop);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const contentRef = useRef<SavedContentDto | null>(null);
-  const lastPersistRef = useRef<{ seconds: number; progressPercent: number } | null>(null);
-  const persistAtRef = useRef(0);
-  const persistingRef = useRef(false);
 
   useEffect(() => {
     setContentId(initialContentId);
@@ -47,10 +43,6 @@ export function MiniPlayerPage({
   }, []);
 
   useEffect(() => {
-    contentRef.current = content;
-  }, [content]);
-
-  useEffect(() => {
     async function loadContent() {
       if (!contentId) {
         setContent(null);
@@ -65,10 +57,6 @@ export function MiniPlayerPage({
       try {
         const response = await fetchContentById(contentId);
         setContent(response);
-        lastPersistRef.current = {
-          seconds: response.lastPlaybackSeconds ?? 0,
-          progressPercent: response.progressPercent
-        };
       } catch (exception) {
         setError(exception instanceof Error ? exception.message : "Failed to load content.");
       } finally {
@@ -110,55 +98,6 @@ export function MiniPlayerPage({
 
     window.open(content.url, "_blank", "noopener,noreferrer");
   }
-
-  const persistPlayback = useCallback(
-    async (seconds: number, duration: number) => {
-      const current = contentRef.current;
-      if (!current || duration <= 0 || persistingRef.current) {
-        return;
-      }
-
-      const nextProgress = Math.min(100, Math.max(1, Math.round((seconds / duration) * 100)));
-      const normalizedProgress = nextProgress >= 98 ? 100 : nextProgress;
-      const normalizedSeconds = Math.max(0, Math.floor(seconds));
-      const previous = lastPersistRef.current;
-      const now = Date.now();
-
-      if (
-        previous &&
-        previous.progressPercent === normalizedProgress &&
-        Math.abs(previous.seconds - normalizedSeconds) < 5
-      ) {
-        return;
-      }
-
-      if (now - persistAtRef.current < 5000) {
-        return;
-      }
-
-      persistAtRef.current = now;
-      persistingRef.current = true;
-
-      try {
-        const updated = await updatePlaybackProgress(current.id, {
-          progressPercent: normalizedProgress,
-          status: normalizedProgress >= 100 ? "COMPLETED" : "IN_PROGRESS",
-          lastPlaybackSeconds: normalizedSeconds
-        });
-
-        setContent(updated);
-        lastPersistRef.current = {
-          seconds: normalizedSeconds,
-          progressPercent: normalizedProgress
-        };
-      } catch {
-        // Keep playback uninterrupted even if autosave fails.
-      } finally {
-        persistingRef.current = false;
-      }
-    },
-    [updatePlaybackProgress]
-  );
 
   async function handleOpenFullView() {
     if (!content) {
@@ -236,12 +175,7 @@ export function MiniPlayerPage({
               <p className="text-[14px] text-textMuted">{error ?? "This content cannot be played here."}</p>
             </div>
           ) : (
-            <YouTubePlayer
-              source={playerSource}
-              autoplay
-              onProgress={(seconds, duration) => void persistPlayback(seconds, duration)}
-              onEnded={() => void persistPlayback(1, 1)}
-            />
+            <YouTubePlayer source={playerSource} autoplay />
           )}
         </div>
 
@@ -250,12 +184,12 @@ export function MiniPlayerPage({
             <SquareArrowOutUpRight className="size-4" />
             Full View
           </SecondaryButton>
-          <SecondaryButton className="min-h-[36px] px-3 text-[13px]" onClick={() => void handleOpenBrowser()}>
+          <SecondaryButton className="min-h-[36px] px-3 text-[13px]" onClick={handleOpenBrowser}>
             <ExternalLink className="size-4" />
             Browser
           </SecondaryButton>
           {nextQueueItem ? (
-            <SecondaryButton className="min-h-[36px] px-3 text-[13px] ml-auto" onClick={() => void handleNext()}>
+            <SecondaryButton className="ml-auto min-h-[36px] px-3 text-[13px]" onClick={() => void handleNext()}>
               <ArrowRight className="size-4" />
               Next
             </SecondaryButton>
