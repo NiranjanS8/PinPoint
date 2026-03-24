@@ -168,6 +168,13 @@ app.whenReady().then(() => {
     return miniPlayerAlwaysOnTop;
   });
 
+  ipcMain.handle("desktop:seek-player", (event, payload) => {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    if (senderWindow && !senderWindow.isDestroyed()) {
+      senderWindow.webContents.send("desktop:seek-player", payload);
+    }
+  });
+
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createMainWindow();

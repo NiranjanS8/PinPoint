@@ -25,8 +25,8 @@ export function FoldersPage() {
       .sort((left, right) => left.folder.name.localeCompare(right.folder.name));
   }, [folders, videos]);
 
-  async function handleCreateFolder(name: string) {
-    await createFolder(name, null);
+  async function handleCreateFolder(name: string, description: string) {
+    await createFolder(name, null, description);
     showToast({
       tone: "success",
       title: "Folder created",
@@ -61,7 +61,7 @@ export function FoldersPage() {
   return (
     <div>
       <div className="mb-7 flex items-start justify-between gap-6">
-        <PageHeader title="Folders" subtitle="" />
+        <PageHeader title="Library" subtitle="" />
         <PrimaryButton onClick={() => setShowCreateDialog(true)}>
           <Plus className="size-4" />
           New Folder
@@ -86,7 +86,7 @@ export function FoldersPage() {
             <button
               key={folder.id}
               type="button"
-              onClick={() => navigate(`/?folderId=${folder.id}`)}
+              onClick={() => navigate(`/folders/${folder.id}`)}
               className="group overflow-hidden rounded-shell bg-panel text-left shadow-panel transition duration-150 hover:-translate-y-[2px] hover:shadow-[0_12px_28px_rgba(0,0,0,0.2)]"
             >
               <div className="flex aspect-[2.35/1] items-center justify-center bg-accentBlue text-white">
@@ -98,6 +98,11 @@ export function FoldersPage() {
                     <h3 className="truncate text-[19px] font-semibold text-textStrong">{folder.name}</h3>
                     {parentName ? (
                       <p className="mt-1 text-[14px] text-textMuted">Inside {parentName}</p>
+                    ) : null}
+                    {folder.description ? (
+                      <p className="mt-2 line-clamp-2 text-[14px] leading-6 text-textMuted">
+                        {folder.description}
+                      </p>
                     ) : null}
                   </div>
                   <button
@@ -125,7 +130,7 @@ export function FoldersPage() {
       <FolderDialog
         open={showCreateDialog}
         title="Create Folder"
-        description="Add a top-level folder to organize your learning content."
+        description=""
         onClose={() => setShowCreateDialog(false)}
         onSubmit={handleCreateFolder}
       />

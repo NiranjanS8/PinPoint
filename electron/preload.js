@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld("pinpointDesktop", {
   getWindowContext: () => ipcRenderer.invoke("desktop:get-window-context"),
   openMiniPlayer: (contentId) => ipcRenderer.invoke("desktop:open-mini-player", { contentId }),
   openFullView: (contentId) => ipcRenderer.invoke("desktop:open-full-view", { contentId }),
+  seekPlayer: (seconds) => ipcRenderer.invoke("desktop:seek-player", { seconds }),
   closeMiniPlayer: () => ipcRenderer.invoke("desktop:close-mini-player"),
   toggleMiniPlayerAlwaysOnTop: () => ipcRenderer.invoke("desktop:toggle-mini-player-always-on-top"),
   onMiniPlayerContext: (callback) => {
@@ -16,5 +17,10 @@ contextBridge.exposeInMainWorld("pinpointDesktop", {
     const listener = (_, payload) => callback(payload);
     ipcRenderer.on("desktop:navigate-to-content", listener);
     return () => ipcRenderer.removeListener("desktop:navigate-to-content", listener);
+  },
+  onSeekPlayer: (callback) => {
+    const listener = (_, payload) => callback(payload);
+    ipcRenderer.on("desktop:seek-player", listener);
+    return () => ipcRenderer.removeListener("desktop:seek-player", listener);
   }
 });

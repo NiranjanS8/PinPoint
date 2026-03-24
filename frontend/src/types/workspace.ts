@@ -21,12 +21,16 @@ export interface VideoItem {
 export interface FolderItem {
   id: string;
   name: string;
+  description: string | null;
   parentId: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface FolderTreeItem {
   id: string;
   name: string;
+  description: string | null;
   parentId: string | null;
   children: FolderTreeItem[];
 }
@@ -65,4 +69,28 @@ export interface ProgressBreakdownItem {
 export interface TopicItem {
   name: string;
   count: string;
+}
+
+export interface AnalyticsDay {
+  date: string;
+  minutes: number;
+  intensity: number;
+}
+
+export interface TopicHeatmapItem {
+  label: string;
+  count: number;
+  percentage: number;
+}
+
+export interface StudyGoal {
+  id: string;
+  title: string;
+  targetDate: string;
+  contentId: string | null;
+  contentTitle: string | null;
+  completed: boolean;
+  daysRemaining: number;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -12,9 +12,11 @@ interface Window {
     getWindowContext: () => Promise<DesktopWindowContext>;
     openMiniPlayer: (contentId: number) => Promise<void>;
     openFullView: (contentId: number) => Promise<void>;
+    seekPlayer: (seconds: number) => Promise<void>;
     closeMiniPlayer: () => Promise<void>;
     toggleMiniPlayerAlwaysOnTop: () => Promise<boolean>;
     onMiniPlayerContext: (callback: (payload: DesktopWindowContext) => void) => () => void;
     onNavigateToContent: (callback: (payload: { contentId: number }) => void) => () => void;
+    onSeekPlayer: (callback: (payload: { seconds: number }) => void) => () => void;
   };
 }

@@ -1,12 +1,12 @@
 import {
   ArrowRight,
-  ExternalLink,
   Pin,
   SquareArrowOutUpRight,
   X
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useContent } from "../context/ContentContext";
+import { formatNoteTimestamp, parseIndexedNotes } from "../utils/indexedNotes";
 import { fetchContentById } from "../services/contentApi";
 import { SecondaryButton } from "../components/ui/SecondaryButton";
 import { YouTubePlayer } from "../components/content/YouTubePlayer";
@@ -91,13 +91,13 @@ export function MiniPlayerPage({
     return toPlayerSource(content.url, content.contentType);
   }, [content]);
 
-  function handleOpenBrowser() {
-    if (!content) {
-      return;
+  const notes = useMemo(() => {
+    if (!content?.notes) {
+      return [];
     }
 
-    window.open(content.url, "_blank", "noopener,noreferrer");
-  }
+    return parseIndexedNotes(content.notes).filter((note) => note.text.trim().length > 0);
+  }, [content?.notes]);
 
   async function handleOpenFullView() {
     if (!content) {
@@ -179,21 +179,45 @@ export function MiniPlayerPage({
           )}
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-2.5">
-          <SecondaryButton className="min-h-[36px] px-3 text-[13px]" onClick={handleOpenFullView}>
-            <SquareArrowOutUpRight className="size-4" />
-            Full View
-          </SecondaryButton>
-          <SecondaryButton className="min-h-[36px] px-3 text-[13px]" onClick={handleOpenBrowser}>
-            <ExternalLink className="size-4" />
-            Browser
-          </SecondaryButton>
-          {nextQueueItem ? (
-            <SecondaryButton className="ml-auto min-h-[36px] px-3 text-[13px]" onClick={() => void handleNext()}>
-              <ArrowRight className="size-4" />
-              Next
-            </SecondaryButton>
-          ) : null}
+        <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-textMuted">Notes</p>
+              <p className="mt-1 text-[13px] text-textMuted">
+                {notes.length > 0 ? `${notes.length} saved note${notes.length === 1 ? "" : "s"}` : "No notes for this video yet."}
+              </p>
+            </div>
+            {nextQueueItem ? (
+              <SecondaryButton className="min-h-[36px] px-3 text-[13px]" onClick={() => void handleNext()}>
+                <ArrowRight className="size-4" />
+                Next
+              </SecondaryButton>
+            ) : null}
+          </div>
+
+          <div className="mini-player-notes-scroll min-h-0 flex-1 overflow-y-auto rounded-2xl bg-[var(--color-surface-soft)]/70 p-2">
+            {notes.length > 0 ? (
+              <div className="grid gap-2">
+                {notes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="rounded-[18px] bg-[var(--color-panel)] px-3.5 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.18)]"
+                  >
+                    <div className="mb-2 inline-flex items-center rounded-full bg-[var(--color-surface-soft)] px-2.5 py-1 text-[11px] font-medium text-textMuted">
+                      {formatNoteTimestamp(note.timestampSeconds)}
+                    </div>
+                    <p className="line-clamp-3 text-[13px] leading-6 text-textStrong">{note.text}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex h-full min-h-[120px] items-center justify-center rounded-[18px] bg-[var(--color-panel)] px-4 text-center">
+                <p className="max-w-[240px] text-[13px] leading-6 text-textMuted">
+                  Add notes from the full content view to keep key timestamps visible while the mini player stays open.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

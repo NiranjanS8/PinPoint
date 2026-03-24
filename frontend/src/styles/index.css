@@ -42,6 +42,12 @@ body {
   overflow: hidden;
 }
 
+input,
+select,
+textarea {
+  color-scheme: light;
+}
+
 :root[data-theme="dark"] {
   --color-shell: #0f1115;
   --color-sidebar: #15181d;
@@ -62,6 +68,16 @@ body {
   --color-progress-muted: #6a7280;
   --shadow-panel: 0 2px 8px rgba(0, 0, 0, 0.25);
   --shadow-dialog: 0 24px 48px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(0.9);
 }
 
 button {

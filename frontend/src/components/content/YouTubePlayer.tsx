@@ -31,6 +31,8 @@ declare global {
       getCurrentTime: () => number;
       getDuration: () => number;
       playVideo: () => void;
+      pauseVideo: () => void;
+      seekTo: (seconds: number, allowSeekAhead?: boolean) => void;
     }
 
     interface PlayerConstructor {
@@ -109,6 +111,37 @@ export function YouTubePlayer({
     onEndedRef.current = onEnded;
   }, [onEnded]);
 
+  useEffect(() => {
+    const seekToTimestamp = (seconds: number) => {
+      if (!playerRef.current) {
+        return;
+      }
+
+      playerRef.current.seekTo(seconds, true);
+      playerRef.current.playVideo();
+    };
+
+    const customEventListener = (event: Event) => {
+      const detail = (event as CustomEvent<{ seconds: number }>).detail;
+      if (typeof detail?.seconds === "number") {
+        seekToTimestamp(detail.seconds);
+      }
+    };
+
+    const removeDesktopListener = window.pinpointDesktop?.onSeekPlayer?.((payload) => {
+      if (typeof payload.seconds === "number") {
+        seekToTimestamp(payload.seconds);
+      }
+    });
+
+    window.addEventListener("pinpoint:player-seek", customEventListener as EventListener);
+
+    return () => {
+      removeDesktopListener?.();
+      window.removeEventListener("pinpoint:player-seek", customEventListener as EventListener);
+    };
+  }, []);
+
   const sourceType = source.type;
   const sourceVideoId = source.type === "video" ? source.videoId : null;
   const sourceListId = source.type === "playlist" ? source.listId : null;
@@ -162,7 +195,7 @@ export function YouTubePlayer({
                 }
 
                 onProgressRef.current?.(playerRef.current.getCurrentTime(), playerRef.current.getDuration());
-              }, 5000);
+              }, 1000);
             } else {
               if (progressTimerRef.current) {
                 window.clearInterval(progressTimerRef.current);

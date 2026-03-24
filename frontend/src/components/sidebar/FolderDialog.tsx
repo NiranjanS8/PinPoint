@@ -7,6 +7,7 @@ export function FolderDialog({
   title,
   description,
   initialName = "",
+  initialDescription = "",
   open,
   onClose,
   onSubmit
@@ -14,20 +15,23 @@ export function FolderDialog({
   title: string;
   description: string;
   initialName?: string;
+  initialDescription?: string;
   open: boolean;
   onClose: () => void;
-  onSubmit: (name: string) => Promise<void>;
+  onSubmit: (name: string, description: string) => Promise<void>;
 }) {
   const [name, setName] = useState(initialName);
+  const [folderDescription, setFolderDescription] = useState(initialDescription);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setName(initialName);
+    setFolderDescription(initialDescription);
     setError(null);
     setSubmitting(false);
-  }, [initialName, open]);
+  }, [initialDescription, initialName, open]);
 
   useEffect(() => {
     if (!open) {
@@ -57,7 +61,7 @@ export function FolderDialog({
     setError(null);
 
     try {
-      await onSubmit(trimmedName);
+      await onSubmit(trimmedName, folderDescription);
       onClose();
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Failed to save folder.");
@@ -79,7 +83,7 @@ export function FolderDialog({
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="m-0 text-[22px] font-semibold text-textStrong">{title}</h2>
-            <p className="mt-1.5 text-[15px] text-textMuted">{description}</p>
+            {description ? <p className="mt-1.5 text-[15px] text-textMuted">{description}</p> : null}
           </div>
           <button
             type="button"
@@ -112,6 +116,21 @@ export function FolderDialog({
               className="min-h-[46px] rounded-[14px] bg-mutedPanel px-4 text-sm text-textStrong outline-none ring-1 ring-inset ring-borderSoft focus:ring-white/10"
               disabled={submitting}
               autoFocus
+              spellCheck={false}
+            />
+          </label>
+
+          <label className="grid gap-2">
+            <span className="text-sm font-medium text-textStrong">Description (Optional)</span>
+            <textarea
+              value={folderDescription}
+              onChange={(event) => setFolderDescription(event.target.value)}
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+              placeholder="What kind of content belongs in this folder?"
+              className="min-h-[110px] rounded-[14px] bg-mutedPanel px-4 py-3 text-sm text-textStrong outline-none ring-1 ring-inset ring-borderSoft focus:ring-white/10"
+              disabled={submitting}
               spellCheck={false}
             />
           </label>

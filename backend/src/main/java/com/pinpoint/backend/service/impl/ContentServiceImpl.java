@@ -78,6 +78,7 @@ public class ContentServiceImpl implements ContentService {
                 .status(LearningStatus.NOT_STARTED)
                 .progressPercent(0)
                 .notes("")
+                .tags("")
                 .build();
 
         return SavedContentMapper.toResponse(savedContentRepository.save(savedContent));
@@ -145,6 +146,9 @@ public class ContentServiceImpl implements ContentService {
 
         if (request.getNotes() != null) {
             savedContent.setNotes(request.getNotes().trim());
+        }
+        if (request.getTags() != null) {
+            savedContent.setTags(normalizeTags(request.getTags()));
         }
 
         return SavedContentMapper.toResponse(savedContentRepository.save(savedContent));
@@ -307,5 +311,20 @@ public class ContentServiceImpl implements ContentService {
             return LearningStatus.COMPLETED;
         }
         return LearningStatus.IN_PROGRESS;
+    }
+
+    private String normalizeTags(String rawTags) {
+        if (rawTags == null || rawTags.isBlank()) {
+            return "";
+        }
+
+        return Stream.of(rawTags.split(","))
+                .map(String::trim)
+                .filter(tag -> !tag.isBlank())
+                .map(tag -> tag.toLowerCase(Locale.ROOT))
+                .distinct()
+                .limit(20)
+                .reduce((left, right) -> left + "," + right)
+                .orElse("");
     }
 }

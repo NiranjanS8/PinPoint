@@ -1,12 +1,12 @@
-import { BarChart3, Clock3, FolderOpen, Library, Moon, Plus } from "lucide-react";
+import { BarChart3, Clock3, FolderOpen, Home, Moon, Plus } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { PrimaryButton } from "../ui/PrimaryButton";
 import { SecondaryButton } from "../ui/SecondaryButton";
 import { SidebarNavItem } from "../ui/SidebarNavItem";
 
 const primaryLinks = [
-  { to: "/", label: "Library", icon: <Library className="size-[18px]" /> },
-  { to: "/folders", label: "Folders", icon: <FolderOpen className="size-[18px]" /> }
+  { to: "/", label: "Home", icon: <Home className="size-[18px]" /> },
+  { to: "/folders", label: "Library", icon: <FolderOpen className="size-[18px]" /> }
 ];
 
 const secondaryLinks = [
@@ -26,12 +26,12 @@ export function AppSidebar({
   const location = useLocation();
 
   return (
-    <aside className="flex h-screen w-[296px] shrink-0 flex-col border-r border-borderSoft bg-sidebar">
+    <aside className="flex h-screen w-[296px] shrink-0 flex-col border-r border-white/5 bg-sidebar">
       <div className="px-[30px] pb-7 pt-[34px]">
         <h1 className="m-0 text-[27px] font-bold leading-[1.15] tracking-[-0.03em] text-textStrong">
-          Pinpoint
+          PinPoint
         </h1>
-        <p className="mt-2 text-sm text-textMuted">Learning Workspace</p>
+        <p className="mt-2 text-sm text-textMuted">Stop searching. Start learning.</p>
       </div>
 
       <nav className="app-scrollbar overflow-y-auto px-3.5 pt-[18px]">

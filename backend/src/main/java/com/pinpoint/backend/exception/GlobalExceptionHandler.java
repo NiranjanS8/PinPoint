@@ -50,6 +50,14 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request);
     }
 
+    @ExceptionHandler(StudyGoalNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleStudyGoalNotFound(
+            StudyGoalNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+    }
+
     @ExceptionHandler(InvalidFolderOperationException.class)
     public ResponseEntity<ErrorResponse> handleInvalidFolderOperation(
             InvalidFolderOperationException exception,

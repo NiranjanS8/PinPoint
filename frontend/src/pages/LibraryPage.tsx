@@ -1,9 +1,10 @@
-import { ChevronDown, ChevronRight, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Filter, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { EmptyStateCard } from "../components/ui/EmptyStateCard";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SearchBar } from "../components/ui/SearchBar";
+import { SelectMenu } from "../components/ui/SelectMenu";
 import { SkeletonCard } from "../components/ui/SkeletonCard";
 import { SectionCard } from "../components/ui/SectionCard";
 import { TagPill } from "../components/ui/TagPill";
@@ -15,15 +16,32 @@ import type { FolderTreeItem, VideoItem } from "../types/workspace";
 import { getContentSearchScore } from "../utils/search";
 
 type SortOption = "pinned" | "newest" | "oldest" | "alphabetical";
+type ContentView = "all" | "videos" | "playlists";
 
 export function LibraryPage() {
   const [search, setSearch] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sort, setSort] = useState<SortOption>("pinned");
+  const [contentView, setContentView] = useState<ContentView>("all");
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [continueLearningExpanded, setContinueLearningExpanded] = useState(false);
   const [dismissedContinueLearningIds, setDismissedContinueLearningIds] = useState<string[]>([]);
   const [searchParams] = useSearchParams();
-  const { videos, folders, folderTree, continueLearning, addQueueItem, loading, error } = useContent();
+  const {
+    videos,
+    folders,
+    folderTree,
+    continueLearning,
+    addQueueItem,
+    removeQueueItem,
+    studyQueue,
+    pinContent,
+    removeContent,
+    updateWorkflow,
+    loading,
+    error
+  } =
+    useContent();
   const { showToast } = useToast();
   const { setActiveContentId } = useWorkspaceUi();
 
@@ -71,6 +89,18 @@ export function LibraryPage() {
     () => continueLearning.filter((video) => !dismissedContinueLearningIds.includes(video.id)),
     [continueLearning, dismissedContinueLearningIds]
   );
+  const filteredVideoItems = useMemo(
+    () => filteredVideos.filter((video) => video.contentType === "VIDEO"),
+    [filteredVideos]
+  );
+  const filteredPlaylistItems = useMemo(
+    () => filteredVideos.filter((video) => video.contentType === "PLAYLIST"),
+    [filteredVideos]
+  );
+  const queueByContentId = useMemo(
+    () => new Map(studyQueue.map((item) => [String(item.content.id), item.id])),
+    [studyQueue]
+  );
 
   useEffect(() => {
     setActiveContentId(filteredVideos.length > 0 ? Number(filteredVideos[0].id) : null);
@@ -83,7 +113,6 @@ export function LibraryPage() {
       return;
     }
 
-    setContinueLearningExpanded(true);
     setDismissedContinueLearningIds((current) =>
       current.filter((id) => continueLearning.some((video) => video.id === id))
     );
@@ -112,6 +141,28 @@ export function LibraryPage() {
     }
   }
 
+  async function handleRemoveFromQueue(video: VideoItem) {
+    const queueItemId = queueByContentId.get(video.id);
+    if (!queueItemId) {
+      return;
+    }
+
+    try {
+      await removeQueueItem(Number(queueItemId));
+      showToast({
+        tone: "info",
+        title: "Removed from queue",
+        description: video.title
+      });
+    } catch (exception) {
+      showToast({
+        tone: "error",
+        title: "Queue action failed",
+        description: exception instanceof Error ? exception.message : "Unable to remove this item from the study queue."
+      });
+    }
+  }
+
   function handleDismissContinueLearning(video: VideoItem) {
     setDismissedContinueLearningIds((current) => [...current, video.id]);
     showToast({
@@ -121,49 +172,133 @@ export function LibraryPage() {
     });
   }
 
+  async function handleCompleteContinueLearning(video: VideoItem) {
+    try {
+      await updateWorkflow(Number(video.id), {
+        status: "COMPLETED",
+        progressPercent: 100
+      });
+      setDismissedContinueLearningIds((current) => [...current, video.id]);
+      showToast({
+        tone: "success",
+        title: "Marked complete",
+        description: video.title
+      });
+    } catch (exception) {
+      showToast({
+        tone: "error",
+        title: "Unable to mark complete",
+        description: exception instanceof Error ? exception.message : "Please try again."
+      });
+    }
+  }
+
+  async function handleTogglePin(video: VideoItem) {
+    try {
+      const updated = await pinContent(Number(video.id));
+      showToast({
+        tone: "success",
+        title: updated.pinned ? "Pinned" : "Unpinned",
+        description: video.title
+      });
+    } catch (exception) {
+      showToast({
+        tone: "error",
+        title: "Pin action failed",
+        description: exception instanceof Error ? exception.message : "Unable to update this item."
+      });
+    }
+  }
+
+  async function handleDelete(video: VideoItem) {
+    try {
+      await removeContent(Number(video.id));
+      showToast({
+        tone: "success",
+        title: "Deleted",
+        description: video.title
+      });
+    } catch (exception) {
+      showToast({
+        tone: "error",
+        title: "Delete failed",
+        description: exception instanceof Error ? exception.message : "Unable to delete this item."
+      });
+    }
+  }
+
   return (
     <div>
       <PageHeader
-        title="Library"
-        subtitle={
-          selectedFolder
-            ? `Browsing content in ${selectedFolder.name}`
-            : "All your saved learning content"
-        }
+        title="Home"
+        subtitle={selectedFolder ? `Browsing content in ${selectedFolder.name}` : undefined}
       />
 
-      <SectionCard className="mt-[28px] p-6">
-        <div className="grid gap-5">
-          <div className="grid grid-cols-[minmax(0,1fr)_180px] items-center gap-4">
-            <SearchBar value={search} onChange={setSearch} className="min-h-[50px]" />
-            <select
-              value={sort}
-              onChange={(event) => setSort(event.target.value as SortOption)}
-              className="min-h-[50px] rounded-[14px] bg-[var(--color-surface-soft)] px-4 text-[15px] text-textStrong outline-none transition hover:bg-mutedPanel"
-            >
-              <option value="pinned">Pinned First</option>
-              <option value="newest">Newest</option>
-              <option value="oldest">Oldest</option>
-              <option value="alphabetical">Alphabetical</option>
-            </select>
+      <SectionCard className="mt-[24px] p-4">
+        <div className="grid gap-4">
+          <div className="flex items-center gap-2">
+            {[
+              { value: "all", label: "All" },
+              { value: "videos", label: "Videos" },
+              { value: "playlists", label: "Playlists" }
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setContentView(option.value as ContentView)}
+                className={`inline-flex min-h-[38px] items-center rounded-[12px] px-3.5 text-[14px] font-semibold transition ${
+                  contentView === option.value
+                    ? "bg-[var(--color-surface-selected)] text-textStrong"
+                    : "bg-[var(--color-surface-soft)] text-textMuted hover:bg-[var(--color-surface-hover)] hover:text-textStrong"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
 
-          <div className="grid gap-3">
-            <div className="flex items-center gap-3">
-            <p className="m-0 text-[16px] text-textMuted">Filter by tags:</p>
-            {selectedFolder ? <TagPill staticStyle>{selectedFolder.name}</TagPill> : null}
-            </div>
-            <p className="text-[13px] text-textMuted">
-              Tip: combine tags and fuzzy search to quickly narrow the next lesson you want to work on.
-            </p>
-            <div className="flex flex-wrap gap-2.5">
+          <div className="grid grid-cols-[minmax(0,1fr)_170px_auto] items-center gap-2.5">
+            <SearchBar value={search} onChange={setSearch} className="min-h-[44px]" />
+            <SelectMenu
+              value={sort}
+              onChange={(value) => setSort(value as SortOption)}
+              className="min-h-[44px]"
+              options={[
+                { value: "pinned", label: "Pinned First" },
+                { value: "newest", label: "Newest" },
+                { value: "oldest", label: "Oldest" },
+                { value: "alphabetical", label: "Alphabetical" }
+              ]}
+            />
+            <button
+              type="button"
+              onClick={() => setFiltersExpanded((current) => !current)}
+              className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-[13px] px-3.5 text-[14px] font-semibold transition ${
+                filtersExpanded || selectedTags.length > 0 || selectedFolder
+                  ? "bg-[var(--color-surface-selected)] text-textStrong"
+                  : "bg-[var(--color-surface-soft)] text-textMuted hover:bg-[var(--color-surface-hover)] hover:text-textStrong"
+              }`}
+            >
+              <Filter className="size-4" />
+              Filter
+              {selectedTags.length > 0 ? (
+                <span className="rounded-full bg-[var(--color-panel)] px-2 py-0.5 text-[12px] text-textStrong">
+                  {selectedTags.length}
+                </span>
+              ) : null}
+            </button>
+          </div>
+
+          {filtersExpanded || selectedTags.length > 0 || selectedFolder ? (
+            <div className="flex items-center gap-2.5 overflow-x-auto pb-1">
+              {selectedFolder ? <TagPill staticStyle>{selectedFolder.name}</TagPill> : null}
               {libraryTags.map((tag) => (
                 <TagPill key={tag} selected={selectedTags.includes(tag)} onClick={() => toggleTag(tag)}>
                   {tag}
                 </TagPill>
               ))}
             </div>
-          </div>
+          ) : null}
         </div>
       </SectionCard>
 
@@ -188,21 +323,35 @@ export function LibraryPage() {
           {continueLearningExpanded ? (
             <div className="grid grid-cols-3 gap-5">
               {visibleContinueLearning.slice(0, 3).map((video) => (
-                <div key={video.id} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => handleDismissContinueLearning(video)}
-                    className="absolute right-3 top-3 z-10 inline-flex size-8 items-center justify-center rounded-xl bg-[rgba(15,17,21,0.72)] text-white/80 transition hover:bg-[rgba(15,17,21,0.9)] hover:text-white"
-                    aria-label="Remove from Continue Learning"
-                    title="Remove from Continue Learning"
-                  >
-                    <X className="size-4" />
-                  </button>
+                <div key={video.id} className="group relative">
+                  <div className="absolute right-3 top-3 z-10 flex items-center gap-2 opacity-0 transition duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+                    <button
+                      type="button"
+                      onClick={() => void handleCompleteContinueLearning(video)}
+                      className="inline-flex size-8 items-center justify-center rounded-xl bg-[rgba(15,17,21,0.72)] text-white/80 transition hover:bg-[rgba(15,17,21,0.9)] hover:text-white"
+                      aria-label="Mark as completed"
+                      title="Mark as completed"
+                    >
+                      <Check className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDismissContinueLearning(video)}
+                      className="inline-flex size-8 items-center justify-center rounded-xl bg-[rgba(15,17,21,0.72)] text-white/80 transition hover:bg-[rgba(15,17,21,0.9)] hover:text-white"
+                      aria-label="Remove from Continue Learning"
+                      title="Remove from Continue Learning"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
                   <VideoCard
                     video={video}
                     variant="library"
                     highlightQuery={search}
                     onAddToQueue={handleAddToQueue}
+                    onRemoveFromQueue={handleRemoveFromQueue}
+                    isQueued={queueByContentId.has(video.id)}
+                    onTogglePin={handleTogglePin}
                   />
                 </div>
               ))}
@@ -210,10 +359,6 @@ export function LibraryPage() {
           ) : null}
         </section>
       ) : null}
-
-      <p className="mb-4 mt-7 text-[15px] text-textMuted">
-        Showing {filteredVideos.length} of {videos.length} items
-      </p>
 
       {loading ? (
         <div className="grid grid-cols-3 gap-5">
@@ -248,16 +393,52 @@ export function LibraryPage() {
         />
       ) : null}
       {!loading && !error && filteredVideos.length > 0 ? (
-        <div className="grid grid-cols-3 gap-5">
-          {filteredVideos.map((video) => (
-            <VideoCard
-              key={video.id}
-              video={video}
-              variant="library"
-              highlightQuery={search}
-              onAddToQueue={handleAddToQueue}
-            />
-          ))}
+        <div className="grid gap-8">
+          {(contentView === "all" || contentView === "videos") && filteredVideoItems.length > 0 ? (
+            <section>
+              <div className="mb-4">
+                <h2 className="m-0 text-[20px] font-semibold text-textStrong">Videos</h2>
+              </div>
+              <div className="grid grid-cols-3 gap-5">
+                {filteredVideoItems.map((video) => (
+                  <VideoCard
+                    key={video.id}
+                    video={video}
+                    variant="library"
+                    highlightQuery={search}
+                    onAddToQueue={handleAddToQueue}
+                    onRemoveFromQueue={handleRemoveFromQueue}
+                    isQueued={queueByContentId.has(video.id)}
+                    onTogglePin={handleTogglePin}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {(contentView === "all" || contentView === "playlists") && filteredPlaylistItems.length > 0 ? (
+            <section>
+              <div className="mb-4">
+                <h2 className="m-0 text-[20px] font-semibold text-textStrong">Playlists</h2>
+              </div>
+              <div className="grid grid-cols-3 gap-5">
+                {filteredPlaylistItems.map((video) => (
+                  <VideoCard
+                    key={video.id}
+                    video={video}
+                    variant="library"
+                    highlightQuery={search}
+                    onAddToQueue={handleAddToQueue}
+                    onRemoveFromQueue={handleRemoveFromQueue}
+                    isQueued={queueByContentId.has(video.id)}
+                    onTogglePin={handleTogglePin}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       ) : null}
     </div>

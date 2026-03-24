@@ -63,6 +63,9 @@ public class SavedContent {
     @Column(length = 5000)
     private String notes;
 
+    @Column(length = 1000)
+    private String tags;
+
     @Column(name = "last_opened_at")
     private LocalDateTime lastOpenedAt;
 

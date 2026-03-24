@@ -5,6 +5,7 @@ import {
   Pin,
   Plus,
   StickyNote,
+  Clock3,
   Trash2
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -12,6 +13,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { YouTubePlayer } from "../components/content/YouTubePlayer";
 import { PageHeader } from "../components/ui/PageHeader";
 import { PrimaryButton } from "../components/ui/PrimaryButton";
+import { SelectMenu } from "../components/ui/SelectMenu";
 import { SecondaryButton } from "../components/ui/SecondaryButton";
 import { SectionCard } from "../components/ui/SectionCard";
 import { TagPill } from "../components/ui/TagPill";
@@ -20,6 +22,7 @@ import { useToast } from "../context/ToastContext";
 import { useWorkspaceUi } from "../context/WorkspaceUiContext";
 import { fetchContentById } from "../services/contentApi";
 import type { SavedContentDto } from "../types/api";
+import { formatNoteTimestamp, parseIndexedNotes, stringifyIndexedNotes, type IndexedNoteItem } from "../utils/indexedNotes";
 
 type DetailTab = "notes" | "queue" | "details";
 
@@ -48,7 +51,9 @@ export function ContentDetailPage() {
   const [processing, setProcessing] = useState(false);
   const [showPlayer, setShowPlayer] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>("notes");
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState<IndexedNoteItem[]>([]);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [currentPlaybackSeconds, setCurrentPlaybackSeconds] = useState(0);
   const openedRef = useRef(false);
   const notesHydratedRef = useRef(false);
 
@@ -92,7 +97,7 @@ export function ContentDetailPage() {
     }
 
     void loadContentDetail();
-  }, [id, items]);
+  }, [id]);
 
   useEffect(() => {
     async function trackOpen() {
@@ -117,13 +122,15 @@ export function ContentDetailPage() {
       return;
     }
 
-    if (notes === content.notes) {
+    const serializedNotes = stringifyIndexedNotes(notes);
+
+    if (serializedNotes === content.notes) {
       return;
     }
 
     const timer = window.setTimeout(async () => {
       try {
-        const updated = await updateWorkflow(content.id, { notes });
+        const updated = await updateWorkflow(content.id, { notes: serializedNotes });
         applyContentUpdate(updated, { preserveNotes: true });
       } catch (exception) {
         setActionError(exception instanceof Error ? exception.message : "Failed to save notes.");
@@ -159,20 +166,69 @@ export function ContentDetailPage() {
 
   function hydrateContent(item: SavedContentDto) {
     setContent(item);
-    setNotes(item.notes ?? "");
+    setNotes(parseIndexedNotes(item.notes ?? ""));
+    setNoteDraft("");
     notesHydratedRef.current = true;
   }
 
   function applyContentUpdate(item: SavedContentDto, options: { preserveNotes?: boolean } = {}) {
     setContent(item);
     if (!options.preserveNotes) {
-      setNotes(item.notes ?? "");
+      setNotes(parseIndexedNotes(item.notes ?? ""));
+      setNoteDraft("");
     }
   }
 
   function handlePlay() {
     setShowPlayer(true);
     setActionError(null);
+  }
+
+  function handleCreateIndexedNote() {
+    const trimmedDraft = noteDraft.trim();
+    if (!trimmedDraft) {
+      return;
+    }
+
+    setNotes((current) => [
+      {
+        id: crypto.randomUUID(),
+        text: trimmedDraft,
+        timestampSeconds: showPlayer && playerSource?.type === "video" ? Math.floor(currentPlaybackSeconds) : null,
+        createdAt: new Date().toISOString()
+      },
+      ...current
+    ]);
+    setNoteDraft("");
+    showToast({
+      tone: "success",
+      title: "Note added",
+      description: showPlayer && playerSource?.type === "video"
+        ? `Captured at ${formatNoteTimestamp(Math.floor(currentPlaybackSeconds))}`
+        : "Saved to this lesson"
+    });
+  }
+
+  function handleDeleteNote(noteId: string) {
+    setNotes((current) => current.filter((note) => note.id !== noteId));
+  }
+
+  function handleSeekToNote(note: IndexedNoteItem) {
+    if (note.timestampSeconds === null) {
+      return;
+    }
+
+    setShowPlayer(true);
+
+    if (window.pinpointDesktop?.seekPlayer) {
+      void window.pinpointDesktop.seekPlayer(note.timestampSeconds);
+    } else {
+      window.dispatchEvent(
+        new CustomEvent("pinpoint:player-seek", {
+          detail: { seconds: note.timestampSeconds }
+        })
+      );
+    }
   }
 
   async function handleTogglePin() {
@@ -358,7 +414,11 @@ export function ContentDetailPage() {
           <SectionCard className="overflow-hidden p-0">
             {showPlayer && playerSource ? (
               <div className="aspect-video w-full overflow-hidden bg-[#07090d]">
-                <YouTubePlayer source={playerSource} autoplay />
+                <YouTubePlayer
+                  source={playerSource}
+                  autoplay
+                  onProgress={(seconds) => setCurrentPlaybackSeconds(seconds)}
+                />
               </div>
             ) : (
               <button
@@ -406,24 +466,26 @@ export function ContentDetailPage() {
                     Add to Queue
                   </SecondaryButton>
                 )}
-                <SecondaryButton
-                  onClick={() => void handleTogglePin()}
-                  disabled={processing}
-                  className="px-3"
-                  aria-label={content.pinned ? "Unpin content" : "Pin content"}
-                  title={content.pinned ? "Unpin" : "Pin"}
-                >
-                  <Pin className="size-4" />
-                </SecondaryButton>
-                <SecondaryButton
-                  onClick={() => void handleDelete()}
-                  disabled={processing}
-                  className="ml-auto px-3 text-[#f97066] hover:bg-[rgba(249,112,102,0.12)]"
-                  aria-label="Delete content"
-                  title="Delete"
-                >
-                  <Trash2 className="size-4" />
-                </SecondaryButton>
+                <div className="ml-auto flex items-center gap-2">
+                  <SecondaryButton
+                    onClick={() => void handleTogglePin()}
+                    disabled={processing}
+                    className={`px-3 ${content.pinned ? "bg-[rgba(96,165,250,0.14)] text-[#93c5fd] hover:bg-[rgba(96,165,250,0.2)]" : ""}`}
+                    aria-label={content.pinned ? "Unpin content" : "Pin content"}
+                    title={content.pinned ? "Unpin" : "Pin"}
+                  >
+                    <Pin className={`size-4 transition ${content.pinned ? "fill-current" : ""}`} />
+                  </SecondaryButton>
+                  <SecondaryButton
+                    onClick={() => void handleDelete()}
+                    disabled={processing}
+                    className="px-3 text-[#f97066] hover:bg-[rgba(249,112,102,0.12)]"
+                    aria-label="Delete content"
+                    title="Delete"
+                  >
+                    <Trash2 className="size-4" />
+                  </SecondaryButton>
+                </div>
               </div>
             </div>
           </SectionCard>
@@ -455,16 +517,33 @@ export function ContentDetailPage() {
           >
             {activeTab === "notes" ? (
               <div className="grid gap-4">
-                <p className="m-0 text-[15px] text-textMuted">
-                  Keep your takeaways, action items, and follow-up ideas close to the lesson while you watch.
-                </p>
-                <textarea
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
-                  rows={12}
-                  className="min-h-[280px] rounded-[18px] bg-[var(--color-surface-soft)] px-4 py-4 text-[15px] leading-7 text-textStrong outline-none"
-                  placeholder="Write study notes, questions, code snippets, or ideas to revisit later."
-                />
+                <div className="flex items-center justify-between gap-4 rounded-[18px] bg-[var(--color-surface-soft)] px-4 py-3">
+                  <p className="m-0 text-[14px] text-textMuted">
+                    Add timestamped notes while you watch so each idea becomes a clickable jump point.
+                  </p>
+                  <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--color-surface-muted)] px-3 py-1.5 text-[13px] text-textMuted">
+                    <Clock3 className="size-3.5" />
+                    {showPlayer && playerSource?.type === "video"
+                      ? `Capture ${formatNoteTimestamp(Math.floor(currentPlaybackSeconds))}`
+                      : "Open video for timestamps"}
+                  </span>
+                </div>
+
+                <div className="rounded-[18px] bg-[var(--color-surface-soft)] p-4">
+                  <textarea
+                    value={noteDraft}
+                    onChange={(event) => setNoteDraft(event.target.value)}
+                    rows={10}
+                    className="min-h-[260px] w-full rounded-[16px] bg-panel px-4 py-4 text-[15px] leading-7 text-textStrong outline-none"
+                    placeholder="Write a note, takeaway, or action item. Pinpoint will attach the current timestamp automatically."
+                  />
+                  <div className="mt-4 flex justify-end">
+                    <PrimaryButton onClick={handleCreateIndexedNote} disabled={noteDraft.trim().length === 0}>
+                      <Plus className="size-4" />
+                      Add Note
+                    </PrimaryButton>
+                  </div>
+                </div>
               </div>
             ) : null}
 
@@ -558,25 +637,75 @@ export function ContentDetailPage() {
                 <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-textMuted">
                   Folder
                 </span>
-                <select
+                <SelectMenu
                   value={content.folderId !== null ? String(content.folderId) : ""}
-                  onChange={(event) => void handleFolderChange(event.target.value)}
-                  className="min-h-11 rounded-[14px] bg-[var(--color-surface-muted)] px-4 text-[15px] text-textStrong outline-none"
+                  onChange={(value) => void handleFolderChange(value)}
                   disabled={processing}
-                >
-                  <option value="">Unassigned</option>
-                  {folders.map((folder) => (
-                    <option key={folder.id} value={folder.id}>
-                      {folder.name}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "", label: "Unassigned" },
+                    ...folders.map((folder) => ({
+                      value: String(folder.id),
+                      label: folder.name
+                    }))
+                  ]}
+                />
               </div>
 
               <div className="flex flex-wrap gap-2">
                 <TagPill staticStyle>{content.contentType}</TagPill>
                 {content.pinned ? <TagPill staticStyle>Pinned</TagPill> : null}
               </div>
+            </WorkflowGroup>
+
+            <WorkflowGroup title="Note Index">
+              <div className="mb-1 flex items-center justify-between gap-3">
+                <p className="m-0 text-[13px] text-textMuted">Timestamped study notes for this lesson</p>
+                <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-[var(--color-surface-muted)] px-2.5 py-1 text-[12px] text-textMuted">
+                  {notes.length}
+                </span>
+              </div>
+
+              {notes.length === 0 ? (
+                <div className="rounded-[16px] bg-panel px-4 py-5 text-center">
+                  <p className="m-0 text-[14px] font-semibold text-textStrong">No notes yet</p>
+                  <p className="mt-2 text-[13px] leading-6 text-textMuted">
+                    Add a note in the workspace and it will appear here as a clickable index point.
+                  </p>
+                </div>
+              ) : (
+                <div className="app-scrollbar grid max-h-[320px] gap-3 overflow-y-auto pr-1">
+                  {notes.map((note) => (
+                    <div key={note.id} className="grid gap-3 rounded-[16px] bg-panel p-3.5">
+                      <button
+                        type="button"
+                        onClick={() => handleSeekToNote(note)}
+                        disabled={note.timestampSeconds === null}
+                        className={`grid gap-2 text-left transition ${
+                          note.timestampSeconds === null ? "cursor-default" : "hover:opacity-90"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface-soft)] px-3 py-1 text-[12px] text-textMuted">
+                            <Clock3 className="size-3.5" />
+                            {formatNoteTimestamp(note.timestampSeconds)}
+                          </span>
+                        </div>
+                        <p className="m-0 text-[14px] leading-6 text-textStrong">{note.text}</p>
+                      </button>
+                      <div className="flex justify-end">
+                        <SecondaryButton
+                          className="min-h-[34px] px-3 text-[12px]"
+                          onClick={() => handleDeleteNote(note.id)}
+                          aria-label="Remove note"
+                          title="Remove note"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </SecondaryButton>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </WorkflowGroup>
 
             {actionError ? <p className="m-0 text-sm text-[#f97066]">{actionError}</p> : null}

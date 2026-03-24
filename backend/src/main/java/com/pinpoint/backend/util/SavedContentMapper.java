@@ -22,6 +22,7 @@ public final class SavedContentMapper {
                 .status(savedContent.getStatus())
                 .progressPercent(savedContent.getProgressPercent())
                 .notes(savedContent.getNotes())
+                .tags(savedContent.getTags())
                 .lastOpenedAt(savedContent.getLastOpenedAt())
                 .lastPlaybackSeconds(savedContent.getLastPlaybackSeconds())
                 .createdAt(savedContent.getCreatedAt())

@@ -1,15 +1,13 @@
 package com.pinpoint.backend.entity;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -20,27 +18,29 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "folders")
+@Table(name = "study_goal")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Folder {
+public class StudyGoal {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, length = 255)
-    private String name;
+    private String title;
 
-    @Column(length = 1000)
-    private String description;
+    @Column(name = "target_date", nullable = false)
+    private LocalDate targetDate;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_id")
-    private Folder parent;
+    @Column(name = "content_id")
+    private Long contentId;
+
+    @Column(nullable = false)
+    private boolean completed;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

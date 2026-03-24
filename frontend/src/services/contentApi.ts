@@ -1,37 +1,7 @@
-import type { ApiErrorResponse, LearningStatus, SavedContentDto } from "../types/api";
+import type { LearningStatus, SavedContentDto } from "../types/api";
+import { parseResponse, safeFetch } from "./sharedApi";
 
 const API_BASE_URL = "http://localhost:9090/api/content";
-
-async function parseResponse<T>(response: Response): Promise<T> {
-  if (response.ok) {
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return (await response.json()) as T;
-  }
-
-  let message = "Something went wrong";
-
-  try {
-    const errorBody = (await response.json()) as ApiErrorResponse;
-    if (errorBody.message) {
-      message = errorBody.message;
-    }
-  } catch {
-    message = response.statusText || message;
-  }
-
-  throw new Error(message);
-}
-
-async function safeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  try {
-    return await fetch(input, init);
-  } catch {
-    throw new Error("Backend is unavailable. Make sure Spring Boot is running on http://localhost:9090.");
-  }
-}
 
 export async function fetchContent(): Promise<SavedContentDto[]> {
   const response = await safeFetch(API_BASE_URL);
@@ -104,7 +74,7 @@ export async function togglePinned(id: number): Promise<SavedContentDto> {
 
 export async function updateContent(
   id: number,
-  payload: { status?: LearningStatus; progressPercent?: number; notes?: string }
+  payload: { status?: LearningStatus; progressPercent?: number; notes?: string; tags?: string }
 ): Promise<SavedContentDto> {
   const response = await safeFetch(`${API_BASE_URL}/${id}`, {
     method: "PUT",

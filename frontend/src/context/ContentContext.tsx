@@ -8,6 +8,10 @@ import {
   type PropsWithChildren
 } from "react";
 import {
+  fetchAnalyticsOverview,
+  logFocusSession as createFocusSession
+} from "../services/analyticsApi";
+import {
   createContent,
   deleteContent,
   fetchContent,
@@ -19,6 +23,7 @@ import {
   updateContentProgress,
   updateContentFolder
 } from "../services/contentApi";
+import { createGoal, deleteGoal, fetchGoals, updateGoal } from "../services/goalsApi";
 import {
   createFolder,
   deleteFolder,
@@ -28,16 +33,18 @@ import {
 } from "../services/folderApi";
 import { addToStudyQueue, fetchStudyQueue, removeFromStudyQueue } from "../services/studyQueueApi";
 import {
+  toAnalyticsOverview,
   toAnalyticsStats,
   toFolderItem,
   toFolderTreeItem,
   toProgressBreakdown,
+  toStudyGoal,
   toStudyQueueItem,
   toTopTopics,
   toVideoItem
 } from "../utils/contentPresentation";
 import type { FolderDto, LearningStatus, SavedContentDto } from "../types/api";
-import type { FolderItem, FolderTreeItem, StudyQueueItem, VideoItem } from "../types/workspace";
+import type { FolderItem, FolderTreeItem, StudyGoal, StudyQueueItem, VideoItem } from "../types/workspace";
 
 interface ContentContextValue {
   items: SavedContentDto[];
@@ -47,6 +54,8 @@ interface ContentContextValue {
   continueLearning: VideoItem[];
   recentlyWatched: VideoItem[];
   studyQueue: StudyQueueItem[];
+  focusAnalytics: ReturnType<typeof toAnalyticsOverview>;
+  studyGoals: StudyGoal[];
   loading: boolean;
   error: string | null;
   analyticsStats: ReturnType<typeof toAnalyticsStats>;
@@ -55,11 +64,11 @@ interface ContentContextValue {
   loadContent: () => Promise<void>;
   loadFolders: () => Promise<void>;
   loadStudyQueue: () => Promise<void>;
-  addContent: (url: string) => Promise<void>;
+  addContent: (url: string) => Promise<SavedContentDto>;
   pinContent: (id: number) => Promise<SavedContentDto>;
   updateWorkflow: (
     id: number,
-    payload: { status?: LearningStatus; progressPercent?: number; notes?: string }
+    payload: { status?: LearningStatus; progressPercent?: number; notes?: string; tags?: string }
   ) => Promise<SavedContentDto>;
   updatePlaybackProgress: (
     id: number,
@@ -68,11 +77,18 @@ interface ContentContextValue {
   markOpened: (id: number) => Promise<SavedContentDto>;
   assignFolder: (contentId: number, folderId: number | null) => Promise<SavedContentDto>;
   removeContent: (id: number) => Promise<void>;
-  createFolder: (name: string, parentId: number | null) => Promise<FolderDto>;
-  renameFolder: (id: number, name: string, parentId: number | null) => Promise<FolderDto>;
+  createFolder: (name: string, parentId: number | null, description?: string) => Promise<FolderDto>;
+  renameFolder: (id: number, name: string, parentId: number | null, description?: string) => Promise<FolderDto>;
   removeFolder: (id: number) => Promise<void>;
   addQueueItem: (contentId: number) => Promise<void>;
   removeQueueItem: (queueItemId: number) => Promise<void>;
+  logFocusSession: (durationMinutes: number) => Promise<void>;
+  createStudyGoal: (payload: { title: string; targetDate: string; contentId?: number | null }) => Promise<void>;
+  updateStudyGoal: (
+    id: number,
+    payload: { title?: string; targetDate?: string; contentId?: number | null; completed?: boolean }
+  ) => Promise<void>;
+  deleteStudyGoal: (id: number) => Promise<void>;
 }
 
 const ContentContext = createContext<ContentContextValue | null>(null);
@@ -84,6 +100,16 @@ export function ContentProvider({ children }: PropsWithChildren) {
   const [continueLearningItems, setContinueLearningItems] = useState<SavedContentDto[]>([]);
   const [recentlyWatchedItems, setRecentlyWatchedItems] = useState<SavedContentDto[]>([]);
   const [studyQueueItems, setStudyQueueItems] = useState<StudyQueueItem[]>([]);
+  const [focusAnalyticsOverview, setFocusAnalyticsOverview] = useState(() =>
+    toAnalyticsOverview({
+      totalFocusMinutes: 0,
+      currentStreakDays: 0,
+      longestStreakDays: 0,
+      contributionDays: [],
+      topicHeatmap: []
+    })
+  );
+  const [studyGoals, setStudyGoals] = useState<StudyGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -113,6 +139,16 @@ export function ContentProvider({ children }: PropsWithChildren) {
     setStudyQueueItems(response.map(toStudyQueueItem));
   }, []);
 
+  const loadFocusAnalytics = useCallback(async () => {
+    const response = await fetchAnalyticsOverview();
+    setFocusAnalyticsOverview(toAnalyticsOverview(response));
+  }, []);
+
+  const loadStudyGoals = useCallback(async () => {
+    const response = await fetchGoals();
+    setStudyGoals(response.map(toStudyGoal));
+  }, []);
+
   const refreshWorkflowCollections = useCallback(async () => {
     await Promise.all([loadContinueLearning(), loadRecentlyWatched(), loadStudyQueue()]);
   }, [loadContinueLearning, loadRecentlyWatched, loadStudyQueue]);
@@ -121,7 +157,7 @@ export function ContentProvider({ children }: PropsWithChildren) {
     async function initializeWorkspace() {
       setLoading(true);
       try {
-        await Promise.all([loadContent(), loadFolders(), refreshWorkflowCollections()]);
+        await Promise.all([loadContent(), loadFolders(), refreshWorkflowCollections(), loadFocusAnalytics(), loadStudyGoals()]);
         setError(null);
       } catch (exception) {
         setError(exception instanceof Error ? exception.message : "Failed to load workspace");
@@ -131,12 +167,13 @@ export function ContentProvider({ children }: PropsWithChildren) {
     }
 
     void initializeWorkspace();
-  }, [loadContent, loadFolders, refreshWorkflowCollections]);
+  }, [loadContent, loadFolders, refreshWorkflowCollections, loadFocusAnalytics, loadStudyGoals]);
 
   const addContent = useCallback(async (url: string) => {
     const created = await createContent(url);
     setItems((current) => [created, ...current].sort(sortContent));
     setError(null);
+    return created;
   }, []);
 
   const pinContent = useCallback(
@@ -153,7 +190,7 @@ export function ContentProvider({ children }: PropsWithChildren) {
   const updateWorkflow = useCallback(
     async (
       id: number,
-      payload: { status?: LearningStatus; progressPercent?: number; notes?: string }
+      payload: { status?: LearningStatus; progressPercent?: number; notes?: string; tags?: string }
     ) => {
       const updated = await updateContent(id, payload);
       setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)).sort(sortContent));
@@ -207,8 +244,8 @@ export function ContentProvider({ children }: PropsWithChildren) {
   );
 
   const handleCreateFolder = useCallback(
-    async (name: string, parentId: number | null) => {
-      const created = await createFolder(name, parentId);
+    async (name: string, parentId: number | null, description?: string) => {
+      const created = await createFolder(name, parentId, description);
       await loadFolders();
       return created;
     },
@@ -216,8 +253,8 @@ export function ContentProvider({ children }: PropsWithChildren) {
   );
 
   const handleRenameFolder = useCallback(
-    async (id: number, name: string, parentId: number | null) => {
-      const updated = await updateFolder(id, name, parentId);
+    async (id: number, name: string, parentId: number | null, description?: string) => {
+      const updated = await updateFolder(id, name, parentId, description);
       await loadFolders();
       return updated;
     },
@@ -251,6 +288,41 @@ export function ContentProvider({ children }: PropsWithChildren) {
     [loadStudyQueue]
   );
 
+  const logFocusSession = useCallback(
+    async (durationMinutes: number) => {
+      await createFocusSession(durationMinutes);
+      await loadFocusAnalytics();
+    },
+    [loadFocusAnalytics]
+  );
+
+  const createStudyGoalEntry = useCallback(
+    async (payload: { title: string; targetDate: string; contentId?: number | null }) => {
+      await createGoal(payload);
+      await loadStudyGoals();
+    },
+    [loadStudyGoals]
+  );
+
+  const updateStudyGoalEntry = useCallback(
+    async (
+      id: number,
+      payload: { title?: string; targetDate?: string; contentId?: number | null; completed?: boolean }
+    ) => {
+      await updateGoal(id, payload);
+      await loadStudyGoals();
+    },
+    [loadStudyGoals]
+  );
+
+  const deleteStudyGoalEntry = useCallback(
+    async (id: number) => {
+      await deleteGoal(id);
+      await loadStudyGoals();
+    },
+    [loadStudyGoals]
+  );
+
   const videos = useMemo(() => items.map(toVideoItem), [items]);
   const continueLearning = useMemo(() => continueLearningItems.map(toVideoItem), [continueLearningItems]);
   const recentlyWatched = useMemo(() => recentlyWatchedItems.map(toVideoItem), [recentlyWatchedItems]);
@@ -268,6 +340,8 @@ export function ContentProvider({ children }: PropsWithChildren) {
       continueLearning,
       recentlyWatched,
       studyQueue: studyQueueItems,
+      focusAnalytics: focusAnalyticsOverview,
+      studyGoals,
       loading,
       error,
       analyticsStats,
@@ -309,7 +383,11 @@ export function ContentProvider({ children }: PropsWithChildren) {
       renameFolder: handleRenameFolder,
       removeFolder: handleRemoveFolder,
       addQueueItem,
-      removeQueueItem
+      removeQueueItem,
+      logFocusSession,
+      createStudyGoal: createStudyGoalEntry,
+      updateStudyGoal: updateStudyGoalEntry,
+      deleteStudyGoal: deleteStudyGoalEntry
     }),
     [
       items,
@@ -319,6 +397,8 @@ export function ContentProvider({ children }: PropsWithChildren) {
       continueLearning,
       recentlyWatched,
       studyQueueItems,
+      focusAnalyticsOverview,
+      studyGoals,
       loading,
       error,
       analyticsStats,
@@ -339,7 +419,11 @@ export function ContentProvider({ children }: PropsWithChildren) {
       handleRenameFolder,
       handleRemoveFolder,
       addQueueItem,
-      removeQueueItem
+      removeQueueItem,
+      logFocusSession,
+      createStudyGoalEntry,
+      updateStudyGoalEntry,
+      deleteStudyGoalEntry
     ]
   );
 

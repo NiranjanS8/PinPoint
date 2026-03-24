@@ -9,7 +9,7 @@ import { useContent } from "../context/ContentContext";
 import { useToast } from "../context/ToastContext";
 
 export function StudySessionPage() {
-  const { videos, studyQueue, addQueueItem, removeQueueItem } = useContent();
+  const { videos, studyQueue, addQueueItem, removeQueueItem, logFocusSession } = useContent();
   const { showToast } = useToast();
   const [selectedDuration, setSelectedDuration] = useState(25);
   const [remainingSeconds, setRemainingSeconds] = useState(selectedDuration * 60);
@@ -17,6 +17,7 @@ export function StudySessionPage() {
   const [showQueueDialog, setShowQueueDialog] = useState(false);
   const [pendingSelection, setPendingSelection] = useState<string[]>([]);
   const [sessionMessage, setSessionMessage] = useState("Ready to focus");
+  const [completedFocusMinutes, setCompletedFocusMinutes] = useState<number | null>(null);
 
   useEffect(() => {
     if (isRunning) {
@@ -41,6 +42,7 @@ export function StudySessionPage() {
           window.clearInterval(timer);
           setIsRunning(false);
           setSessionMessage("Session complete");
+          setCompletedFocusMinutes(selectedDuration);
           return 0;
         }
 
@@ -50,6 +52,31 @@ export function StudySessionPage() {
 
     return () => window.clearInterval(timer);
   }, [isRunning]);
+
+  useEffect(() => {
+    if (!completedFocusMinutes) {
+      return;
+    }
+
+    void logFocusSession(completedFocusMinutes)
+      .then(() => {
+        showToast({
+          tone: "success",
+          title: "Focus session logged",
+          description: `${completedFocusMinutes} minutes added to your analytics.`
+        });
+      })
+      .catch((exception) => {
+        showToast({
+          tone: "error",
+          title: "Could not log focus session",
+          description: exception instanceof Error ? exception.message : "Please try again."
+        });
+      })
+      .finally(() => {
+        setCompletedFocusMinutes(null);
+      });
+  }, [completedFocusMinutes, logFocusSession, showToast]);
 
   const queuedContentIds = useMemo(() => new Set(studyQueue.map((item) => item.content.id)), [studyQueue]);
   const isPaused = !isRunning && sessionMessage === "Session paused";

@@ -43,25 +43,30 @@ export async function fetchFolderTree(): Promise<FolderTreeDto[]> {
   return parseResponse<FolderTreeDto[]>(response);
 }
 
-export async function createFolder(name: string, parentId: number | null): Promise<FolderDto> {
+export async function createFolder(name: string, parentId: number | null, description?: string): Promise<FolderDto> {
   const response = await safeFetch(FOLDER_API_BASE_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ name, parentId })
+    body: JSON.stringify({ name, parentId, description })
   });
 
   return parseResponse<FolderDto>(response);
 }
 
-export async function updateFolder(id: number, name: string, parentId: number | null): Promise<FolderDto> {
+export async function updateFolder(
+  id: number,
+  name: string,
+  parentId: number | null,
+  description?: string
+): Promise<FolderDto> {
   const response = await safeFetch(`${FOLDER_API_BASE_URL}/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ name, parentId })
+    body: JSON.stringify({ name, parentId, description })
   });
 
   return parseResponse<FolderDto>(response);

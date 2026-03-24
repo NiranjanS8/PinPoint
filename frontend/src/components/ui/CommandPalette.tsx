@@ -69,10 +69,10 @@ export function CommandPalette({ open, onClose, onOpenAddVideo }: CommandPalette
       },
       {
         id: "action-library",
-        title: "Open Library",
+        title: "Open Home",
         subtitle: "Return to the main learning workspace",
         icon: <Library className="size-4" />,
-        keywords: "library home all content",
+        keywords: "home library all content",
         action: () => {
           onClose();
           navigate("/");

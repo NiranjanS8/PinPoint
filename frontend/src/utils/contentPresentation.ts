@@ -1,4 +1,12 @@
-import type { FolderDto, FolderTreeDto, SavedContentDto, StudyQueueItemDto } from "../types/api";
+import type {
+  AnalyticsOverviewDto,
+  FolderDto,
+  FolderTreeDto,
+  SavedContentDto,
+  StudyGoalDto,
+  StudyQueueItemDto
+} from "../types/api";
+import { getIndexedNotesPreview } from "./indexedNotes";
 import type {
   AnalyticsStats,
   DashboardStats,
@@ -6,6 +14,8 @@ import type {
   FolderTreeItem,
   ProgressBreakdownItem,
   StudyQueueItem,
+  StudyGoal,
+  TopicHeatmapItem,
   TopicItem,
   VideoItem
 } from "../types/workspace";
@@ -52,6 +62,13 @@ function deriveDuration(title: string, contentType: SavedContentDto["contentType
 }
 
 export function toVideoItem(content: SavedContentDto): VideoItem {
+  const persistedTags = content.tags
+    ? content.tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    : [];
+
   return {
     id: String(content.id),
     title: content.title,
@@ -60,7 +77,7 @@ export function toVideoItem(content: SavedContentDto): VideoItem {
     date: formatDate(content.createdAt),
     createdAt: content.createdAt,
     progress: content.progressPercent,
-    tags: deriveTags(content.title, content.contentType),
+    tags: persistedTags.length > 0 ? persistedTags : deriveTags(content.title, content.contentType),
     thumbnail: content.thumbnailUrl,
     url: content.url,
     pinned: content.pinned,
@@ -68,7 +85,7 @@ export function toVideoItem(content: SavedContentDto): VideoItem {
     status: content.status,
     folderId: content.folderId !== null ? String(content.folderId) : null,
     folderName: content.folderName,
-    notes: content.notes ?? "",
+    notes: getIndexedNotesPreview(content.notes ?? ""),
     lastOpenedAt: content.lastOpenedAt
   };
 }
@@ -86,7 +103,10 @@ export function toFolderItem(folder: FolderDto): FolderItem {
   return {
     id: String(folder.id),
     name: folder.name,
-    parentId: folder.parentId !== null ? String(folder.parentId) : null
+    description: folder.description,
+    parentId: folder.parentId !== null ? String(folder.parentId) : null,
+    createdAt: folder.createdAt,
+    updatedAt: folder.updatedAt
   };
 }
 
@@ -94,6 +114,7 @@ export function toFolderTreeItem(folder: FolderTreeDto): FolderTreeItem {
   return {
     id: String(folder.id),
     name: folder.name,
+    description: folder.description,
     parentId: folder.parentId !== null ? String(folder.parentId) : null,
     children: folder.children.map(toFolderTreeItem)
   };
@@ -179,4 +200,29 @@ export function toTopTopics(items: VideoItem[]): TopicItem[] {
       name,
       count: `${count} videos`
     }));
+}
+
+export function toAnalyticsOverview(overview: AnalyticsOverviewDto) {
+  return {
+    totalFocusHours: `${(overview.totalFocusMinutes / 60).toFixed(1)}h`,
+    totalFocusMinutes: overview.totalFocusMinutes,
+    currentStreak: `${overview.currentStreakDays} days`,
+    longestStreak: `${overview.longestStreakDays} days`,
+    contributionDays: overview.contributionDays,
+    topicHeatmap: overview.topicHeatmap
+  };
+}
+
+export function toStudyGoal(goal: StudyGoalDto): StudyGoal {
+  return {
+    id: String(goal.id),
+    title: goal.title,
+    targetDate: goal.targetDate,
+    contentId: goal.contentId !== null ? String(goal.contentId) : null,
+    contentTitle: goal.contentTitle,
+    completed: goal.completed,
+    daysRemaining: goal.daysRemaining,
+    createdAt: goal.createdAt,
+    updatedAt: goal.updatedAt
+  };
 }

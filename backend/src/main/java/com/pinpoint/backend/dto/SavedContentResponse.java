@@ -24,6 +24,7 @@ public class SavedContentResponse {
     private LearningStatus status;
     private int progressPercent;
     private String notes;
+    private String tags;
     private LocalDateTime lastOpenedAt;
     private Integer lastPlaybackSeconds;
     private LocalDateTime createdAt;

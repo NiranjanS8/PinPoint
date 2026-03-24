@@ -39,6 +39,7 @@ public class FolderServiceImpl implements FolderService {
 
         Folder folder = Folder.builder()
                 .name(request.getName().trim())
+                .description(normalizeDescription(request.getDescription()))
                 .parent(parent)
                 .build();
 
@@ -81,6 +82,7 @@ public class FolderServiceImpl implements FolderService {
         validateDuplicateSiblingName(request.getName(), parent, folder.getId());
 
         folder.setName(request.getName().trim());
+        folder.setDescription(normalizeDescription(request.getDescription()));
         folder.setParent(parent);
 
         return toResponse(folderRepository.save(folder));
@@ -182,6 +184,7 @@ public class FolderServiceImpl implements FolderService {
         return FolderTreeResponse.builder()
                 .id(folder.getId())
                 .name(folder.getName())
+                .description(folder.getDescription())
                 .parentId(folder.getParent() != null ? folder.getParent().getId() : null)
                 .createdAt(folder.getCreatedAt())
                 .updatedAt(folder.getUpdatedAt())
@@ -193,10 +196,20 @@ public class FolderServiceImpl implements FolderService {
         return FolderResponse.builder()
                 .id(folder.getId())
                 .name(folder.getName())
+                .description(folder.getDescription())
                 .parentId(folder.getParent() != null ? folder.getParent().getId() : null)
                 .createdAt(folder.getCreatedAt())
                 .updatedAt(folder.getUpdatedAt())
                 .build();
+    }
+
+    private String normalizeDescription(String description) {
+        if (description == null) {
+            return null;
+        }
+
+        String trimmed = description.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private Folder findFolder(Long id) {
