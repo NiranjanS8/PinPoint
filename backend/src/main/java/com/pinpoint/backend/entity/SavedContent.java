@@ -9,9 +9,12 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.FetchType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -50,6 +53,26 @@ public class SavedContent {
     @Column(name = "thumbnail_url", nullable = false, length = 1000)
     private String thumbnailUrl;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private LearningStatus status;
+
+    @Column(name = "progress_percent", nullable = false)
+    private int progressPercent;
+
+    @Column(length = 5000)
+    private String notes;
+
+    @Column(name = "last_opened_at")
+    private LocalDateTime lastOpenedAt;
+
+    @Column(name = "last_playback_seconds")
+    private Integer lastPlaybackSeconds;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "folder_id")
+    private Folder folder;
+
     @Column(nullable = false)
     private boolean pinned;
 
@@ -64,6 +87,9 @@ public class SavedContent {
         LocalDateTime now = LocalDateTime.now();
         createdAt = now;
         updatedAt = now;
+        if (status == null) {
+            status = LearningStatus.NOT_STARTED;
+        }
     }
 
     @PreUpdate

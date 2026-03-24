@@ -17,7 +17,7 @@ export function StatCard({
   progress?: number;
 }) {
   return (
-    <article className="rounded-shell border border-borderSoft bg-panel px-7 py-6 shadow-panel">
+    <article className="rounded-shell bg-panel px-7 py-6 shadow-panel">
       <div className="flex items-start gap-4">
         <div className={`inline-flex size-[46px] items-center justify-center rounded-[14px] ${toneClass}`}>
           {icon}

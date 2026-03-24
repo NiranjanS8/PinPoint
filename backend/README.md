@@ -55,7 +55,12 @@ Behavior:
 ### GET `/api/content`
 
 - returns all saved items
-- sorted pinned first, then newest first
+- supports optional query params:
+  - `folderId`
+  - `search`
+  - `sort` = `pinned`, `newest`, `oldest`, `alphabetical`
+  - `pinned`
+  - `contentType`
 
 ### GET `/api/content/{id}`
 
@@ -67,10 +72,71 @@ Behavior:
 - toggles pinned state
 - returns updated item
 
+### PUT `/api/content/{id}/folder`
+
+Request:
+
+```json
+{
+  "folderId": 12
+}
+```
+
+Behavior:
+
+- assigns content to a folder
+- send `null` to unassign content from folders
+
 ### DELETE `/api/content/{id}`
 
 - deletes one saved item
 - returns `204 No Content`
+
+### POST `/api/folders`
+
+Request:
+
+```json
+{
+  "name": "Spring Boot",
+  "parentId": 3
+}
+```
+
+Behavior:
+
+- creates a root folder when `parentId` is omitted
+- creates a nested folder when `parentId` is present
+
+### GET `/api/folders`
+
+- returns the flat folder list
+
+### GET `/api/folders/tree`
+
+- returns nested folders for sidebar tree rendering
+
+### PUT `/api/folders/{id}`
+
+Request:
+
+```json
+{
+  "name": "Advanced Spring Boot",
+  "parentId": 3
+}
+```
+
+Behavior:
+
+- renames a folder
+- optionally changes parent when valid
+- rejects self-parenting and circular nesting
+
+### DELETE `/api/folders/{id}`
+
+- recursively deletes the selected folder and all descendants
+- content inside deleted folders is preserved and becomes unassigned
 
 ## Notes
 
@@ -81,6 +147,11 @@ Behavior:
 - Phase 1 uses a simple, practical strategy:
   - try YouTube oEmbed first for videos
   - fall back to page metadata parsing with Jsoup
+- Folders are stored as a nested hierarchy using nullable parent references.
+- Folder deletion is intentionally simple for this phase:
+  - remove the folder subtree
+  - keep saved content
+  - clear any folder assignments that pointed to the deleted folders
 
 ## Assumptions
 
@@ -92,7 +163,6 @@ Behavior:
 ## Future Improvements
 
 - add tests for URL normalization and service behavior
-- add folder support for Phase 2
 - improve playlist metadata extraction
-- add API filters and search
 - add migrations with Flyway or Liquibase
+- add tests for folder tree validation and recursive delete behavior

@@ -3,6 +3,7 @@ package com.pinpoint.backend.dto;
 import java.time.LocalDateTime;
 
 import com.pinpoint.backend.entity.ContentType;
+import com.pinpoint.backend.entity.LearningStatus;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -17,7 +18,14 @@ public class SavedContentResponse {
     private ContentType contentType;
     private String channelName;
     private String thumbnailUrl;
+    private Long folderId;
+    private String folderName;
     private boolean pinned;
+    private LearningStatus status;
+    private int progressPercent;
+    private String notes;
+    private LocalDateTime lastOpenedAt;
+    private Integer lastPlaybackSeconds;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

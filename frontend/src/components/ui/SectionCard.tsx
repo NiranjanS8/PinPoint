@@ -7,7 +7,7 @@ export function SectionCard({
   className = ""
 }: PropsWithChildren<{ title?: string; actions?: ReactNode; className?: string }>) {
   return (
-    <section className={`rounded-shell border border-borderSoft bg-panel shadow-panel ${className}`}>
+    <section className={`rounded-shell bg-panel shadow-panel ${className}`}>
       {title || actions ? (
         <div className="flex items-center justify-between gap-4 px-7 pt-7">
           {title ? <h2 className="m-0 text-[17px] font-semibold text-textStrong">{title}</h2> : <span />}

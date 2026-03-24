@@ -12,10 +12,10 @@ export function TimerSelector({
           key={item}
           type="button"
           onClick={() => onChange(item)}
-          className={`min-h-10 min-w-[66px] rounded-[14px] border px-[18px] text-[15px] font-semibold ${
+          className={`min-h-10 min-w-[66px] rounded-[14px] px-[18px] text-[15px] font-semibold transition ${
             value === item
-              ? "border-navy bg-navy text-white"
-              : "border-borderSoft bg-panel text-textStrong"
+              ? "bg-navy text-white shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
+              : "bg-[var(--color-surface-soft)] text-textStrong hover:bg-mutedPanel"
           }`}
         >
           {item}m

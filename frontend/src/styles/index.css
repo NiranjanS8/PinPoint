@@ -5,7 +5,7 @@
   --color-sidebar: #f5f5f4;
   --color-panel: #ffffff;
   --color-muted-panel: #f3f3f5;
-  --color-border-soft: rgba(0, 0, 0, 0.1);
+  --color-border-soft: rgba(0, 0, 0, 0.06);
   --color-text-strong: #101828;
   --color-text-muted: #667085;
   --color-navy: #131522;
@@ -22,7 +22,7 @@
   --color-progress-neutral: #e4e7ec;
   --color-progress-dark: #141727;
   --color-progress-muted: #c7cad1;
-  --shadow-panel: 0 1px 2px rgba(15, 23, 42, 0.035);
+  --shadow-panel: 0 2px 8px rgba(15, 23, 42, 0.04);
   --shadow-dialog: 0 24px 48px rgba(16, 24, 40, 0.18);
   --radius-shell: 18px;
 }
@@ -43,24 +43,24 @@ body {
 }
 
 :root[data-theme="dark"] {
-  --color-shell: #181b20;
-  --color-sidebar: #1f2329;
-  --color-panel: #232830;
-  --color-muted-panel: #2a3038;
-  --color-border-soft: rgba(255, 255, 255, 0.1);
+  --color-shell: #0f1115;
+  --color-sidebar: #15181d;
+  --color-panel: #1a1d22;
+  --color-muted-panel: #22262d;
+  --color-border-soft: rgba(255, 255, 255, 0.05);
   --color-text-strong: #f5f7fa;
   --color-text-muted: #aab3c2;
-  --color-navy: #3a414c;
-  --color-surface-soft: #2a2f37;
-  --color-surface-muted: #323844;
-  --color-surface-selected: #edf0f6;
-  --color-surface-hover: #2e343d;
+  --color-navy: #2f3742;
+  --color-surface-soft: #20242b;
+  --color-surface-muted: #262b33;
+  --color-surface-selected: #272c35;
+  --color-surface-hover: #1c2027;
   --color-icon-muted: #6f7886;
-  --color-progress-track: #313844;
-  --color-progress-neutral: #505866;
+  --color-progress-track: #2a2f38;
+  --color-progress-neutral: #4b5360;
   --color-progress-dark: #f5f7fa;
   --color-progress-muted: #6a7280;
-  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-panel: 0 2px 8px rgba(0, 0, 0, 0.25);
   --shadow-dialog: 0 24px 48px rgba(0, 0, 0, 0.4);
 }
 
@@ -75,4 +75,8 @@ button {
 .app-scrollbar::-webkit-scrollbar-thumb {
   background: #d7dae0;
   border-radius: 999px;
+}
+
+:root[data-theme="dark"] .app-scrollbar::-webkit-scrollbar-thumb {
+  background: #343a44;
 }

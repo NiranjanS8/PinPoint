@@ -14,8 +14,8 @@ export function TagPill({
         staticStyle
           ? "bg-[var(--color-surface-muted)] text-textMuted"
           : selected
-            ? "border border-borderSoft bg-[var(--color-surface-selected)] text-textStrong"
-            : "border border-borderSoft bg-panel text-textStrong"
+            ? "bg-[var(--color-surface-selected)] text-textStrong"
+            : "bg-[var(--color-surface-soft)] text-textStrong"
       } ${className}`}
       {...props}
     >

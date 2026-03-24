@@ -14,8 +14,12 @@ export function RecentWatchItem({ video }: { video: VideoItem }) {
         <span className="inline-flex min-h-[30px] items-center rounded-full bg-[var(--color-surface-muted)] px-3 text-sm font-semibold text-textStrong">
           {video.progress}%
         </span>
-        <span className="text-[15px] text-textMuted">{video.date}</span>
+        <span className="text-[15px] text-textMuted">{formatRecentDate(video.lastOpenedAt ?? video.createdAt)}</span>
       </div>
     </div>
   );
+}
+
+function formatRecentDate(value: string) {
+  return new Date(value).toLocaleDateString("en-US");
 }

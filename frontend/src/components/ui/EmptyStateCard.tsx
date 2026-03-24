@@ -12,7 +12,7 @@ export function EmptyStateCard({
   action?: ReactNode;
 }) {
   return (
-    <div className="grid min-h-[320px] place-items-center rounded-shell border border-borderSoft bg-panel shadow-panel">
+    <div className="grid min-h-[320px] place-items-center rounded-shell bg-panel shadow-panel">
       <div className="grid justify-items-center gap-2 text-center">
         <div className="mb-2 text-[var(--color-icon-muted)]">{icon}</div>
         <h2 className="m-0 text-[17px] font-medium text-textStrong">{title}</h2>

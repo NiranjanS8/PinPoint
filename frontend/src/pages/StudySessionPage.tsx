@@ -8,11 +8,10 @@ import { TimerSelector } from "../components/ui/TimerSelector";
 import { useContent } from "../context/ContentContext";
 
 export function StudySessionPage() {
-  const { videos } = useContent();
+  const { videos, studyQueue, addQueueItem, removeQueueItem } = useContent();
   const [selectedDuration, setSelectedDuration] = useState(25);
   const [remainingSeconds, setRemainingSeconds] = useState(selectedDuration * 60);
   const [isRunning, setIsRunning] = useState(false);
-  const [queueIds, setQueueIds] = useState<string[]>([]);
   const [showQueueDialog, setShowQueueDialog] = useState(false);
   const [pendingSelection, setPendingSelection] = useState<string[]>([]);
   const [sessionMessage, setSessionMessage] = useState("Ready to focus");
@@ -46,13 +45,7 @@ export function StudySessionPage() {
     return () => window.clearInterval(timer);
   }, [isRunning]);
 
-  const queueVideos = useMemo(
-    () =>
-      queueIds
-        .map((id) => videos.find((video) => video.id === id))
-        .filter((video): video is (typeof videos)[number] => Boolean(video)),
-    [queueIds, videos]
-  );
+  const queuedContentIds = useMemo(() => new Set(studyQueue.map((item) => item.content.id)), [studyQueue]);
 
   function formatTime(totalSeconds: number) {
     const minutes = Math.floor(totalSeconds / 60);
@@ -61,12 +54,12 @@ export function StudySessionPage() {
   }
 
   function openQueueDialog() {
-    setPendingSelection(queueIds);
+    setPendingSelection(studyQueue.map((item) => item.content.id));
     setShowQueueDialog(true);
   }
 
   function closeQueueDialog() {
-    setPendingSelection(queueIds);
+    setPendingSelection(studyQueue.map((item) => item.content.id));
     setShowQueueDialog(false);
   }
 
@@ -76,13 +69,21 @@ export function StudySessionPage() {
     );
   }
 
-  function saveQueue() {
-    setQueueIds(pendingSelection);
+  async function saveQueue() {
+    const selectedSet = new Set(pendingSelection);
+    const toAdd = pendingSelection.filter((id) => !queuedContentIds.has(id));
+    const toRemove = studyQueue.filter((item) => !selectedSet.has(item.content.id));
+
+    await Promise.all([
+      ...toAdd.map((id) => addQueueItem(Number(id))),
+      ...toRemove.map((item) => removeQueueItem(Number(item.id)))
+    ]);
+
     setShowQueueDialog(false);
   }
 
-  function removeFromQueue(id: string) {
-    setQueueIds((current) => current.filter((item) => item !== id));
+  async function handleRemoveFromQueue(queueItemId: string) {
+    await removeQueueItem(Number(queueItemId));
   }
 
   function handleStartSession() {
@@ -128,7 +129,7 @@ export function StudySessionPage() {
 
       <div className="mt-[30px]">
         <SectionCard
-          title={`Queue (${queueVideos.length})`}
+          title={`Queue (${studyQueue.length})`}
           actions={
             <SecondaryButton className="min-w-[148px]" onClick={openQueueDialog}>
               <Plus className="size-4" />
@@ -137,7 +138,7 @@ export function StudySessionPage() {
           }
           className="min-h-[286px]"
         >
-          {queueVideos.length === 0 ? (
+          {studyQueue.length === 0 ? (
             <div className="grid min-h-[190px] place-items-center content-center gap-4 text-center">
               <p className="m-0 text-[17px] text-textMuted">Your queue is empty</p>
               <PrimaryButton onClick={openQueueDialog}>
@@ -147,26 +148,26 @@ export function StudySessionPage() {
             </div>
           ) : (
             <div className="grid gap-4">
-              {queueVideos.map((video) => (
+              {studyQueue.map((item) => (
                 <div
-                  key={video.id}
+                  key={item.id}
                   className="grid grid-cols-[88px_minmax(0,1fr)_auto] items-center gap-4 rounded-2xl bg-[var(--color-surface-soft)] p-3.5"
                 >
                   <img
-                    src={video.thumbnail}
-                    alt={video.title}
+                    src={item.content.thumbnail}
+                    alt={item.content.title}
                     className="h-16 w-[88px] rounded-xl object-cover"
                   />
                   <div className="min-w-0">
-                    <h3 className="truncate text-[17px] font-semibold text-textStrong">{video.title}</h3>
+                    <h3 className="truncate text-[17px] font-semibold text-textStrong">{item.content.title}</h3>
                     <p className="mt-1 text-[14px] text-textMuted">
-                      {video.channel} {"\u2022"} {video.duration}
+                      {item.content.channel} {"\u2022"} {item.content.duration}
                     </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => removeFromQueue(video.id)}
-                    className="inline-flex size-9 items-center justify-center rounded-xl border border-borderSoft bg-panel text-textMuted transition hover:bg-mutedPanel"
+                    onClick={() => void handleRemoveFromQueue(item.id)}
+                    className="inline-flex size-9 items-center justify-center rounded-xl bg-[var(--color-surface-soft)] text-textMuted transition hover:bg-mutedPanel"
                   >
                     <X className="size-4" />
                   </button>
@@ -179,7 +180,7 @@ export function StudySessionPage() {
 
       {showQueueDialog ? (
         <div className="fixed inset-0 z-20 grid place-items-center bg-[rgba(16,24,40,0.22)] p-6">
-          <div className="w-full max-w-[560px] rounded-[20px] border border-borderSoft bg-panel p-6 shadow-dialog">
+          <div className="w-full max-w-[560px] rounded-[20px] bg-panel p-6 shadow-dialog">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="m-0 text-[22px] font-semibold text-textStrong">Add Videos to Queue</h2>
@@ -190,7 +191,7 @@ export function StudySessionPage() {
               <button
                 type="button"
                 onClick={closeQueueDialog}
-                className="inline-flex size-9 items-center justify-center rounded-xl border border-borderSoft bg-panel text-textMuted transition hover:bg-mutedPanel"
+                className="inline-flex size-9 items-center justify-center rounded-xl bg-[var(--color-surface-soft)] text-textMuted transition hover:bg-mutedPanel"
               >
                 <X className="size-4" />
               </button>
@@ -242,7 +243,7 @@ export function StudySessionPage() {
 
             <div className="mt-5 flex justify-end gap-3">
               <SecondaryButton onClick={closeQueueDialog}>Cancel</SecondaryButton>
-              <PrimaryButton onClick={saveQueue}>
+              <PrimaryButton onClick={() => void saveQueue()}>
                 <Plus className="size-4" />
                 Add to Queue
               </PrimaryButton>

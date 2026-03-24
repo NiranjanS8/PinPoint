@@ -134,7 +134,7 @@ export function PlaylistsPage() {
 
       {showDialog ? (
         <div className="fixed inset-0 z-20 grid place-items-center bg-[rgba(16,24,40,0.22)] p-6">
-          <div className="w-full max-w-[430px] rounded-[20px] border border-borderSoft bg-panel p-6 shadow-dialog">
+          <div className="w-full max-w-[430px] rounded-[20px] bg-panel p-6 shadow-dialog">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="m-0 text-[22px] font-semibold text-textStrong">Create Playlist</h2>
@@ -145,7 +145,7 @@ export function PlaylistsPage() {
               <button
                 type="button"
                 onClick={closeDialog}
-                className="inline-flex size-9 items-center justify-center rounded-xl border border-borderSoft bg-panel text-textMuted transition hover:bg-mutedPanel"
+                className="inline-flex size-9 items-center justify-center rounded-xl bg-[var(--color-surface-soft)] text-textMuted transition hover:bg-mutedPanel"
               >
                 <X className="size-4" />
               </button>
@@ -159,7 +159,7 @@ export function PlaylistsPage() {
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder="Frontend Deep Dives"
-                  className="min-h-[46px] rounded-[14px] border border-borderSoft bg-mutedPanel px-4 text-sm text-textStrong outline-none"
+                  className="min-h-[46px] rounded-[14px] bg-mutedPanel px-4 text-sm text-textStrong outline-none ring-1 ring-inset ring-borderSoft focus:ring-white/10"
                 />
               </label>
 

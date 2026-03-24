@@ -42,6 +42,22 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request);
     }
 
+    @ExceptionHandler(FolderNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleFolderNotFound(
+            FolderNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidFolderOperationException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidFolderOperation(
+            InvalidFolderOperationException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), request);
+    }
+
     @ExceptionHandler(MetadataFetchException.class)
     public ResponseEntity<ErrorResponse> handleMetadataFetch(
             MetadataFetchException exception,

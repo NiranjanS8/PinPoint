@@ -1,10 +1,4 @@
-import type {
-  AnalyticsStats,
-  DashboardStats,
-  ProgressBreakdownItem,
-  TopicItem,
-  VideoItem
-} from "../types/workspace";
+import type { AnalyticsStats, DashboardStats, ProgressBreakdownItem, TopicItem, VideoItem } from "../types/workspace";
 
 function svgDataUrl(svg: string) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -63,12 +57,18 @@ export const videos: VideoItem[] = [
     channel: "Quantum Academy",
     duration: "15:30",
     date: "3/20/2026",
+    createdAt: "2026-03-20T00:00:00",
     progress: 50,
     tags: ["quantum", "physics", "technology"],
     thumbnail: quantumThumb,
     url: "https://www.youtube.com/watch?v=JhHMJCUmq28",
     pinned: false,
-    contentType: "VIDEO"
+    contentType: "VIDEO",
+    status: "IN_PROGRESS",
+    folderId: null,
+    folderName: null,
+    notes: "Review the basic model of qubits and superposition.",
+    lastOpenedAt: "2026-03-24T09:30:00"
   },
   {
     id: "2",
@@ -76,12 +76,18 @@ export const videos: VideoItem[] = [
     channel: "Dev Mastery",
     duration: "28:45",
     date: "3/18/2026",
+    createdAt: "2026-03-18T00:00:00",
     progress: 75,
     tags: ["react", "javascript", "web-dev"],
     thumbnail: reactThumb,
     url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     pinned: true,
-    contentType: "VIDEO"
+    contentType: "VIDEO",
+    status: "IN_PROGRESS",
+    folderId: null,
+    folderName: null,
+    notes: "Revisit the compound component pattern example.",
+    lastOpenedAt: "2026-03-23T20:15:00"
   },
   {
     id: "3",
@@ -89,12 +95,18 @@ export const videos: VideoItem[] = [
     channel: "3Blue1Brown",
     duration: "22:18",
     date: "3/15/2026",
+    createdAt: "2026-03-15T00:00:00",
     progress: 25,
     tags: ["machine-learning", "AI", "data-science"],
     thumbnail: mlThumb,
     url: "https://www.youtube.com/watch?v=aircAruvnKk",
     pinned: false,
-    contentType: "VIDEO"
+    contentType: "VIDEO",
+    status: "IN_PROGRESS",
+    folderId: null,
+    folderName: null,
+    notes: "",
+    lastOpenedAt: "2026-03-22T18:00:00"
   },
   {
     id: "4",
@@ -102,12 +114,18 @@ export const videos: VideoItem[] = [
     channel: "Fun Fun Function",
     duration: "35:12",
     date: "3/12/2026",
+    createdAt: "2026-03-12T00:00:00",
     progress: 0,
     tags: ["javascript", "functional-programming", "web-dev"],
     thumbnail: functionalThumb,
     url: "https://www.youtube.com/watch?v=e-5obm1G_FY",
     pinned: false,
-    contentType: "VIDEO"
+    contentType: "VIDEO",
+    status: "NOT_STARTED",
+    folderId: null,
+    folderName: null,
+    notes: "",
+    lastOpenedAt: null
   }
 ];
 

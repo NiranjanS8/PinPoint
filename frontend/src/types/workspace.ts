@@ -4,12 +4,38 @@ export interface VideoItem {
   channel: string;
   duration: string;
   date: string;
+  createdAt: string;
   progress: number;
   tags: string[];
   thumbnail: string;
   url: string;
   pinned: boolean;
   contentType: "VIDEO" | "PLAYLIST";
+  status: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
+  folderId: string | null;
+  folderName: string | null;
+  notes: string;
+  lastOpenedAt: string | null;
+}
+
+export interface FolderItem {
+  id: string;
+  name: string;
+  parentId: string | null;
+}
+
+export interface FolderTreeItem {
+  id: string;
+  name: string;
+  parentId: string | null;
+  children: FolderTreeItem[];
+}
+
+export interface StudyQueueItem {
+  id: string;
+  position: number;
+  createdAt: string;
+  content: VideoItem;
 }
 
 export interface DashboardStats {

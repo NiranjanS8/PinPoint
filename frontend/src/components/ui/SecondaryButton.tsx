@@ -7,7 +7,7 @@ export function SecondaryButton({
 }: PropsWithChildren<ButtonHTMLAttributes<HTMLButtonElement>>) {
   return (
     <button
-      className={`inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl border border-borderSoft bg-panel px-4 text-sm font-semibold text-textStrong shadow-[0_1px_2px_rgba(15,23,42,0.025)] transition hover:bg-mutedPanel ${className}`}
+      className={`inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl bg-[var(--color-surface-soft)] px-4 text-sm font-semibold text-textStrong transition hover:bg-mutedPanel active:scale-[0.99] ${className}`}
       {...props}
     >
       {children}

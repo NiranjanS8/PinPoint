@@ -1,8 +1,11 @@
-import type { SavedContentDto } from "../types/api";
+import type { FolderDto, FolderTreeDto, SavedContentDto, StudyQueueItemDto } from "../types/api";
 import type {
   AnalyticsStats,
   DashboardStats,
+  FolderItem,
+  FolderTreeItem,
   ProgressBreakdownItem,
+  StudyQueueItem,
   TopicItem,
   VideoItem
 } from "../types/workspace";
@@ -19,13 +22,6 @@ const TITLE_DURATION_MAP: Record<string, string> = {
   "advanced react patterns": "28:45",
   "machine learning fundamentals": "22:18",
   "functional programming in javascript": "35:12"
-};
-
-const TITLE_PROGRESS_MAP: Record<string, number> = {
-  "introduction to quantum computing": 50,
-  "advanced react patterns": 75,
-  "machine learning fundamentals": 25,
-  "functional programming in javascript": 0
 };
 
 function normalizeTitle(title: string) {
@@ -55,10 +51,6 @@ function deriveDuration(title: string, contentType: SavedContentDto["contentType
   return contentType === "PLAYLIST" ? "Playlist" : "--:--";
 }
 
-function deriveProgress(title: string) {
-  return TITLE_PROGRESS_MAP[normalizeTitle(title)] ?? 0;
-}
-
 export function toVideoItem(content: SavedContentDto): VideoItem {
   return {
     id: String(content.id),
@@ -66,12 +58,44 @@ export function toVideoItem(content: SavedContentDto): VideoItem {
     channel: content.channelName,
     duration: deriveDuration(content.title, content.contentType),
     date: formatDate(content.createdAt),
-    progress: deriveProgress(content.title),
+    createdAt: content.createdAt,
+    progress: content.progressPercent,
     tags: deriveTags(content.title, content.contentType),
     thumbnail: content.thumbnailUrl,
     url: content.url,
     pinned: content.pinned,
-    contentType: content.contentType
+    contentType: content.contentType,
+    status: content.status,
+    folderId: content.folderId !== null ? String(content.folderId) : null,
+    folderName: content.folderName,
+    notes: content.notes ?? "",
+    lastOpenedAt: content.lastOpenedAt
+  };
+}
+
+export function toStudyQueueItem(item: StudyQueueItemDto): StudyQueueItem {
+  return {
+    id: String(item.id),
+    position: item.position,
+    createdAt: item.createdAt,
+    content: toVideoItem(item.content)
+  };
+}
+
+export function toFolderItem(folder: FolderDto): FolderItem {
+  return {
+    id: String(folder.id),
+    name: folder.name,
+    parentId: folder.parentId !== null ? String(folder.parentId) : null
+  };
+}
+
+export function toFolderTreeItem(folder: FolderTreeDto): FolderTreeItem {
+  return {
+    id: String(folder.id),
+    name: folder.name,
+    parentId: folder.parentId !== null ? String(folder.parentId) : null,
+    children: folder.children.map(toFolderTreeItem)
   };
 }
 
@@ -89,7 +113,7 @@ export function toDashboardStats(items: VideoItem[]): DashboardStats {
 }
 
 export function toAnalyticsStats(items: VideoItem[]): AnalyticsStats {
-  const completed = items.filter((item) => item.progress === 100).length;
+  const completed = items.filter((item) => item.status === "COMPLETED").length;
   const completionRate = items.length === 0 ? 0 : Math.round((completed / items.length) * 100);
 
   return {
@@ -112,9 +136,9 @@ export function toAnalyticsStats(items: VideoItem[]): AnalyticsStats {
 }
 
 export function toProgressBreakdown(items: VideoItem[]): ProgressBreakdownItem[] {
-  const completed = items.filter((item) => item.progress === 100).length;
-  const inProgress = items.filter((item) => item.progress > 0 && item.progress < 100).length;
-  const notStarted = items.filter((item) => item.progress === 0).length;
+  const completed = items.filter((item) => item.status === "COMPLETED").length;
+  const inProgress = items.filter((item) => item.status === "IN_PROGRESS").length;
+  const notStarted = items.filter((item) => item.status === "NOT_STARTED").length;
   const total = items.length || 1;
 
   return [

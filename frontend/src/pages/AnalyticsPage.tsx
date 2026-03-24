@@ -9,7 +9,7 @@ import { TagPill } from "../components/ui/TagPill";
 import { useContent } from "../context/ContentContext";
 
 export function AnalyticsPage() {
-  const { analyticsStats, progressBreakdown, topTopics, videos, loading, error } = useContent();
+  const { analyticsStats, progressBreakdown, topTopics, videos, recentlyWatched, loading, error } = useContent();
 
   if (loading) {
     return (
@@ -117,7 +117,7 @@ export function AnalyticsPage() {
       <div className="mt-7">
         <SectionCard title="Recently Watched">
           <div className="grid gap-4">
-            {videos.map((video) => (
+            {recentlyWatched.map((video) => (
               <RecentWatchItem key={video.id} video={video} />
             ))}
           </div>
