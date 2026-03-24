@@ -13,6 +13,8 @@ public class SavedContentResponse {
     private String channelName;
     private String thumbnailUrl;
     private Boolean pinned;
+    private Long folderId;
+    private String folderName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -70,6 +72,22 @@ public class SavedContentResponse {
 
     public void setPinned(Boolean pinned) {
         this.pinned = pinned;
+    }
+
+    public Long getFolderId() {
+        return folderId;
+    }
+
+    public void setFolderId(Long folderId) {
+        this.folderId = folderId;
+    }
+
+    public String getFolderName() {
+        return folderName;
+    }
+
+    public void setFolderName(String folderName) {
+        this.folderName = folderName;
     }
 
     public LocalDateTime getCreatedAt() {

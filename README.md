@@ -1,54 +1,66 @@
 # Pinpoint
 
-Pinpoint is a Phase 1 desktop MVP for collecting YouTube videos and playlists in one focused workspace. It uses Electron for the desktop shell, React for the UI, Spring Boot for the local API, and SQLite for persistence.
+Pinpoint is a desktop learning organizer for collecting YouTube videos and playlists, then grouping them into nested topic folders. The app uses Electron for the desktop shell, React for the UI, Spring Boot for the local API, and SQLite for persistence.
 
 ## Project Structure
 
 ```text
 PinPoint/
-├─ electron/    # Desktop shell and preload bridge
-├─ frontend/    # React app
-├─ backend/     # Spring Boot API + SQLite persistence
-├─ package.json # Root dev/build scripts
-└─ README.md
+|- electron/    # Desktop shell and preload bridge
+|- frontend/    # React organizer UI
+|- backend/     # Spring Boot API + SQLite persistence
+|- package.json # Root scripts
+`- README.md
 ```
 
-## Phase 1 Includes
+## Phase 2 Includes
 
 - Electron desktop shell with a single main window
-- React home dashboard with:
-  - add by YouTube URL
-  - validation and inline errors
-  - filter chips
-  - saved content cards
+- React organizer UI with:
+  - left sidebar navigation
+  - Home, Pinned, and Recent views
+  - nested topic folders
+  - create, rename, and delete folder dialogs
+  - folder tree expand/collapse
+  - content-to-folder assignment
+  - search by title or channel
+  - sort by pinned, newest, oldest, or alphabetical
   - embedded player/detail view
-  - delete confirmation
-  - toast feedback
+  - delete confirmation and toast feedback
 - Spring Boot backend with:
   - layered architecture
-  - SQLite storage
+  - folder and content APIs
+  - SQLite persistence
   - duplicate prevention by normalized URL
-  - pinned-first sorting
-  - metadata extraction service isolated behind an interface
+  - folder-aware content filtering
   - global exception handling
-- Support for YouTube video links and playlist links
 
 ## Architecture Notes
 
-- `backend/controller` handles HTTP only.
-- `backend/service` owns business logic and metadata extraction.
-- `backend/repository` contains persistence access.
-- `frontend/services` keeps API calls out of components.
-- `frontend/components` contains reusable UI pieces.
-- `frontend/pages/HomePage.tsx` orchestrates Phase 1 state without introducing unnecessary global state.
-- `electron/preload.js` exposes only the small desktop capability needed in Phase 1: opening links in the system browser.
+- `backend/controller` stays HTTP-focused.
+- `backend/service` owns folder rules, metadata extraction, filtering, and assignment logic.
+- `backend/repository` remains thin and persistence-oriented.
+- `frontend/services` centralizes API calls for content and folders.
+- `frontend/components` now contains reusable organizer primitives such as sidebar, folder tree, action menu, dialogs, and assignment dropdowns.
+- `frontend/pages/HomePage.tsx` coordinates the Phase 2 organizer state without introducing a heavier state library.
 
-This keeps Phase 1 small while leaving clean extension points for:
+## What Changed From Phase 1
 
-- topic folders and nested organization
-- mini-player overlays
-- focus mode flows
-- richer metadata providers
+- The flat saved-items dashboard is now a structured organizer.
+- A nested folder model was added to the backend and database.
+- Saved content can now be assigned to one folder or remain unassigned.
+- The UI now uses a desktop organizer layout with a sidebar and folder tree.
+- Search and sort are handled through backend query parameters instead of only local client filtering.
+
+## Folder Deletion Strategy
+
+Phase 2 uses a simple documented rule:
+
+- deleting a folder also deletes its subfolders
+- content inside that deleted folder tree is not deleted
+- affected content becomes unassigned
+
+This keeps the hierarchy simple while preserving saved learning material.
 
 ## Dependencies
 
@@ -85,28 +97,28 @@ This keeps Phase 1 small while leaving clean extension points for:
 
 ## Setup
 
-Install frontend and Electron dependencies:
+Install root, frontend, and Electron dependencies:
 
 ```bash
 npm install
 npm run install:all
 ```
 
-The backend uses Maven dependencies, which are fetched automatically when you run the Spring Boot app.
+The backend Maven dependencies are downloaded automatically when you run Spring Boot.
 
 ## Local Development
 
-Start the backend, frontend, and Electron together from the project root:
+From the project root:
 
 ```bash
 npm run dev
 ```
 
-That script does the following:
+That starts:
 
-1. Runs Spring Boot on `http://localhost:9090`
-2. Runs the frontend dev server on `http://localhost:5173`
-3. Launches Electron after both services are available
+1. Spring Boot on `http://localhost:9090`
+2. The frontend dev server on `http://localhost:5173`
+3. Electron after both services are available
 
 ## Build
 
@@ -118,45 +130,63 @@ npm run build
 
 This builds:
 
-- the React frontend into `frontend/dist`
+- the frontend into `frontend/dist`
 - the Spring Boot jar into `backend/target`
 - the Electron shell readiness step for later packaging
 
-For Phase 1, packaging installers is intentionally left out to keep the project focused on the working MVP.
+Packaging installers is still intentionally postponed.
 
 ## API Endpoints
+
+### Content
 
 - `POST /api/content`
 - `GET /api/content`
 - `GET /api/content/{id}`
 - `PUT /api/content/{id}/pin`
+- `PUT /api/content/{id}/folder`
 - `DELETE /api/content/{id}`
 
-## Metadata Strategy In Phase 1
+Supported query params for `GET /api/content`:
 
-The metadata flow is intentionally simple:
+- `folderId`
+- `search`
+- `sort`
+- `pinned`
+- `contentType`
+
+### Folders
+
+- `POST /api/folders`
+- `GET /api/folders`
+- `GET /api/folders/tree`
+- `PUT /api/folders/{id}`
+- `DELETE /api/folders/{id}`
+
+## Database Notes
+
+- SQLite data is stored in `pinpoint.db` in the backend working directory.
+- `saved_content` now supports nullable `folder_id`.
+- `folders` stores the nested hierarchy with nullable `parent_id`.
+- Hibernate `ddl-auto=update` handles the Phase 2 schema evolution automatically for local development.
+
+## Metadata Strategy
+
+The metadata flow is still intentionally lightweight:
 
 - validate and normalize supported YouTube URLs
 - detect `VIDEO` or `PLAYLIST`
 - fetch lightweight metadata from YouTube pages
 - use video `oEmbed` when available
-- keep the extraction logic isolated in `MetadataService`
+- keep extraction isolated behind `MetadataService`
 
-This works well enough for the MVP while making it easy to improve with a stronger parser or official API in a later phase.
+## Postponed For Phase 3+
 
-## Phase 2+ Placeholders
-
-Not implemented yet:
-
-- nested topic folders
 - mini-player overlay
 - focus mode
+- notes
+- progress tracking
+- folder reparenting / drag-and-drop
 - packaged installers
-- stronger playlist metadata extraction
-- authentication or cloud sync
-
-## Notes
-
-- SQLite data is stored in `pinpoint.db` in the backend process working directory
-- Duplicate protection is based on normalized URL
-- The desktop player uses an embedded YouTube iframe and also offers an `Open in Browser` fallback
+- richer playlist metadata extraction
+- cloud sync or auth

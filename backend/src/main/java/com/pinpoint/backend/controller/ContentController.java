@@ -1,7 +1,9 @@
 package com.pinpoint.backend.controller;
 
+import com.pinpoint.backend.dto.request.AssignFolderRequest;
 import com.pinpoint.backend.dto.request.CreateContentRequest;
 import com.pinpoint.backend.dto.response.SavedContentResponse;
+import com.pinpoint.backend.entity.ContentType;
 import com.pinpoint.backend.service.ContentService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -34,8 +36,14 @@ public class ContentController {
     }
 
     @GetMapping
-    public List<SavedContentResponse> getAll() {
-        return contentService.getAll();
+    public List<SavedContentResponse> getAll(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Long folderId,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String search,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String sort,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean pinned,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) ContentType contentType
+    ) {
+        return contentService.getAll(folderId, search, sort, pinned, contentType);
     }
 
     @GetMapping("/{id}")
@@ -46,6 +54,11 @@ public class ContentController {
     @PutMapping("/{id}/pin")
     public SavedContentResponse togglePinned(@PathVariable Long id) {
         return contentService.togglePinned(id);
+    }
+
+    @PutMapping("/{id}/folder")
+    public SavedContentResponse assignFolder(@PathVariable Long id, @RequestBody AssignFolderRequest request) {
+        return contentService.assignFolder(id, request);
     }
 
     @DeleteMapping("/{id}")
