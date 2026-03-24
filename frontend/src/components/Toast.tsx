@@ -1,4 +1,5 @@
 import type { ToastState } from "../hooks/useToast";
+import { Button } from "./Button";
 
 interface ToastProps {
   toast: ToastState | null;
@@ -13,9 +14,9 @@ export function Toast({ toast, onClose }: ToastProps) {
   return (
     <div className={`toast toast-${toast.variant}`}>
       <span>{toast.message}</span>
-      <button type="button" className="ghost-button toast-close" onClick={onClose}>
+      <Button variant="ghost" size="sm" className="toast-close" onClick={onClose}>
         Dismiss
-      </button>
+      </Button>
     </div>
   );
 }

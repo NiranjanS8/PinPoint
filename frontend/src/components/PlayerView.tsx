@@ -1,5 +1,6 @@
 import type { SavedContent } from "../types/content";
 import { buildEmbedUrl } from "../utils/youtube";
+import { Button } from "./Button";
 
 interface PlayerViewProps {
   content: SavedContent;
@@ -26,9 +27,9 @@ export function PlayerView({ content, onClose }: PlayerViewProps) {
             <h2>{content.title}</h2>
             <p>{content.channelName}</p>
           </div>
-          <button type="button" className="ghost-button" onClick={onClose}>
+          <Button variant="ghost" size="sm" onClick={onClose}>
             Close
-          </button>
+          </Button>
         </div>
 
         <div className="player-frame-wrap">
@@ -43,9 +44,9 @@ export function PlayerView({ content, onClose }: PlayerViewProps) {
         </div>
 
         <div className="modal-footer">
-          <button type="button" className="secondary-button" onClick={handleOpenInBrowser}>
+          <Button variant="primary" onClick={handleOpenInBrowser}>
             Open in Browser
-          </button>
+          </Button>
         </div>
       </div>
     </div>

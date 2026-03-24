@@ -113,7 +113,6 @@ export function HomePage() {
 
   return (
     <main className="app-shell">
-      <div className="app-gradient" />
       <div className="app-content">
         <Header />
         <AddContentForm isSubmitting={saving} onSubmit={handleAdd} />

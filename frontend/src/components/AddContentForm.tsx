@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from "react";
+import { Button } from "./Button";
 import { detectContentType, isValidYouTubeUrl } from "../utils/youtube";
 
 interface AddContentFormProps {
@@ -36,9 +37,11 @@ export function AddContentForm({ isSubmitting, onSubmit }: AddContentFormProps) 
 
   return (
     <section className="surface add-form-panel">
-      <div className="section-copy">
-        <h2>Add YouTube Content</h2>
-        <p>Paste a video or playlist link to keep it handy inside Pinpoint.</p>
+      <div className="section-heading">
+        <div className="section-copy">
+          <h2>Add content</h2>
+          <p>Paste a YouTube video or playlist link to save it locally.</p>
+        </div>
       </div>
 
       <form className="add-form" onSubmit={handleSubmit}>
@@ -53,9 +56,9 @@ export function AddContentForm({ isSubmitting, onSubmit }: AddContentFormProps) 
           onChange={(event) => setUrl(event.target.value)}
           placeholder="https://www.youtube.com/watch?v=..."
         />
-        <button className="primary-button" type="submit" disabled={isSubmitting}>
+        <Button variant="primary" type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Saving..." : "Add"}
-        </button>
+        </Button>
       </form>
 
       {error ? <p className="form-error">{error}</p> : null}

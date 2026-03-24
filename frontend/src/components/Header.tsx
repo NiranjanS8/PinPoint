@@ -1,7 +1,7 @@
 export function Header() {
   return (
     <header className="app-header">
-      <div>
+      <div className="header-copy">
         <p className="eyebrow">Desktop YouTube Organizer</p>
         <h1>Pinpoint</h1>
       </div>

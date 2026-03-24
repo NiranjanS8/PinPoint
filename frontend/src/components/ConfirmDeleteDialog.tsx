@@ -1,4 +1,5 @@
 import type { SavedContent } from "../types/content";
+import { Button } from "./Button";
 
 interface ConfirmDeleteDialogProps {
   content: SavedContent;
@@ -21,12 +22,12 @@ export function ConfirmDeleteDialog({
           <strong>{content.title}</strong> will be removed from your saved list.
         </p>
         <div className="modal-footer">
-          <button type="button" className="ghost-button" onClick={onCancel} disabled={isDeleting}>
+          <Button variant="ghost" onClick={onCancel} disabled={isDeleting}>
             Cancel
-          </button>
-          <button type="button" className="danger-button" onClick={onConfirm} disabled={isDeleting}>
+          </Button>
+          <Button variant="danger" onClick={onConfirm} disabled={isDeleting}>
             {isDeleting ? "Deleting..." : "Delete"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

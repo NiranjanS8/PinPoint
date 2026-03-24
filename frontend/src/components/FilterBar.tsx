@@ -1,3 +1,4 @@
+import { Button } from "./Button";
 import type { FilterType } from "../types/content";
 
 const FILTERS: Array<{ label: string; value: FilterType }> = [
@@ -14,17 +15,25 @@ interface FilterBarProps {
 
 export function FilterBar({ activeFilter, onChange }: FilterBarProps) {
   return (
-    <div className="filter-bar">
+    <section className="filter-section">
+      <div className="section-heading compact-heading">
+        <div className="section-copy">
+          <h2>Library</h2>
+        </div>
+      </div>
+
+      <div className="filter-bar">
       {FILTERS.map((filter) => (
-        <button
+        <Button
           key={filter.value}
-          type="button"
+          size="sm"
           className={`filter-chip ${activeFilter === filter.value ? "active" : ""}`}
           onClick={() => onChange(filter.value)}
         >
           {filter.label}
-        </button>
+        </Button>
       ))}
-    </div>
+      </div>
+    </section>
   );
 }

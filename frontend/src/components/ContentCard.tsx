@@ -1,4 +1,5 @@
 import type { SavedContent } from "../types/content";
+import { Button } from "./Button";
 
 interface ContentCardProps {
   content: SavedContent;
@@ -17,20 +18,20 @@ export function ContentCard({ content, onOpen, onTogglePin, onDelete }: ContentC
 
       <div className="card-body">
         <div className="card-copy">
-          <h3>{content.title}</h3>
-          <p>{content.channelName}</p>
+          <h3 className="truncate-two-lines">{content.title}</h3>
+          <p className="truncate-one-line">{content.channelName}</p>
         </div>
 
         <div className="card-actions">
-          <button type="button" className="secondary-button" onClick={() => onOpen(content)}>
+          <Button variant="primary" size="sm" onClick={() => onOpen(content)}>
             Play
-          </button>
-          <button type="button" className="ghost-button" onClick={() => onTogglePin(content)}>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => onTogglePin(content)}>
             {content.pinned ? "Unpin" : "Pin"}
-          </button>
-          <button type="button" className="danger-button" onClick={() => onDelete(content)}>
+          </Button>
+          <Button variant="danger" size="sm" onClick={() => onDelete(content)}>
             Delete
-          </button>
+          </Button>
         </div>
       </div>
     </article>
