@@ -112,8 +112,8 @@ export function FolderDialog({
                   void handleSubmit();
                 }
               }}
-              placeholder="Spring Boot"
-              className="min-h-[46px] rounded-[14px] bg-mutedPanel px-4 text-sm text-textStrong outline-none ring-1 ring-inset ring-borderSoft focus:ring-white/10"
+              placeholder="Enter folder name"
+              className="min-h-[46px] rounded-[14px] bg-mutedPanel px-4 text-sm text-textStrong outline-none ring-1 ring-inset ring-white/5 focus:ring-white/10"
               disabled={submitting}
               autoFocus
               spellCheck={false}
@@ -129,7 +129,7 @@ export function FolderDialog({
               onClick={(event) => event.stopPropagation()}
               onKeyDown={(event) => event.stopPropagation()}
               placeholder="What kind of content belongs in this folder?"
-              className="min-h-[110px] rounded-[14px] bg-mutedPanel px-4 py-3 text-sm text-textStrong outline-none ring-1 ring-inset ring-borderSoft focus:ring-white/10"
+              className="min-h-[110px] rounded-[14px] bg-mutedPanel px-4 py-3 text-sm text-textStrong outline-none ring-1 ring-inset ring-white/5 focus:ring-white/10"
               disabled={submitting}
               spellCheck={false}
             />

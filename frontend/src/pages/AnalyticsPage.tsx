@@ -1,5 +1,5 @@
-import { BarChart3, CalendarDays, Check, Clock3, Target, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { BarChart3, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Target, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EmptyStateCard } from "../components/ui/EmptyStateCard";
 import { PageHeader } from "../components/ui/PageHeader";
 import { PrimaryButton } from "../components/ui/PrimaryButton";
@@ -26,6 +26,46 @@ export function AnalyticsPage() {
   const { showToast } = useToast();
   const [goalTitle, setGoalTitle] = useState("");
   const [goalDate, setGoalDate] = useState("");
+  const [goalCalendarOpen, setGoalCalendarOpen] = useState(false);
+  const [goalCalendarMonth, setGoalCalendarMonth] = useState(() => startOfMonth(new Date()));
+  const goalCalendarRef = useRef<HTMLDivElement | null>(null);
+
+  const goalCalendarDays = useMemo(() => buildCalendarDays(goalCalendarMonth), [goalCalendarMonth]);
+
+  useEffect(() => {
+    if (!goalCalendarOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!goalCalendarRef.current?.contains(event.target as Node)) {
+        setGoalCalendarOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setGoalCalendarOpen(false);
+      }
+    }
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [goalCalendarOpen]);
+
+  function isValidGoalDate(value: string) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return false;
+    }
+
+    const parsed = new Date(`${value}T00:00:00`);
+    return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  }
 
   async function handleCreateGoal() {
     if (!goalTitle.trim() || !goalDate) {
@@ -33,6 +73,15 @@ export function AnalyticsPage() {
         tone: "error",
         title: "Goal details missing",
         description: "Add a goal title and target date."
+      });
+      return;
+    }
+
+    if (!isValidGoalDate(goalDate)) {
+      showToast({
+        tone: "error",
+        title: "Invalid target date",
+        description: "Choose a valid target date from the calendar."
       });
       return;
     }
@@ -56,6 +105,12 @@ export function AnalyticsPage() {
         description: exception instanceof Error ? exception.message : "Please try again."
       });
     }
+  }
+
+  function openGoalDatePicker() {
+    const baseDate = goalDate ? new Date(`${goalDate}T00:00:00`) : new Date();
+    setGoalCalendarMonth(startOfMonth(baseDate));
+    setGoalCalendarOpen((current) => !current);
   }
 
   async function handleToggleGoal(goalId: string, completed: boolean) {
@@ -210,7 +265,8 @@ export function AnalyticsPage() {
       <div className="mt-7 grid grid-cols-2 gap-7 items-stretch">
         <SectionCard title="Goal Tracker" className="h-full min-h-[340px]">
           <div className="grid gap-5">
-            <div className="grid grid-cols-[minmax(0,1fr)_180px_auto] gap-3">
+            <div className="grid gap-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3">
               <input
                 type="text"
                 value={goalTitle}
@@ -218,15 +274,89 @@ export function AnalyticsPage() {
                 placeholder="Set a study goal"
                 className="min-h-[44px] rounded-[13px] bg-[var(--color-surface-soft)] px-4 text-[15px] text-textStrong outline-none ring-1 ring-transparent focus:ring-white/10"
               />
-              <input
-                type="date"
-                value={goalDate}
-                onChange={(event) => setGoalDate(event.target.value)}
-                className="min-h-[44px] rounded-[13px] bg-[var(--color-surface-soft)] px-4 text-[15px] text-textStrong outline-none ring-1 ring-transparent focus:ring-white/10"
-              />
+              <div className="relative" ref={goalCalendarRef}>
+                <button
+                  type="button"
+                  onClick={openGoalDatePicker}
+                  className={`inline-flex size-[44px] items-center justify-center rounded-[13px] transition ${
+                    goalDate
+                      ? "bg-[var(--color-surface-selected)] text-textStrong"
+                      : "bg-[var(--color-surface-soft)] text-textMuted hover:bg-[var(--color-surface-hover)] hover:text-textStrong"
+                  }`}
+                  title={goalDate ? `Target date: ${formatCalendarDate(goalDate)}` : "Choose target date"}
+                  aria-label={goalDate ? `Target date: ${formatCalendarDate(goalDate)}` : "Choose target date"}
+                >
+                  <CalendarDays className="size-5" />
+                </button>
+              </div>
               <PrimaryButton className="min-h-[44px] px-4" onClick={() => void handleCreateGoal()}>
                 Add Goal
               </PrimaryButton>
+              </div>
+
+              {goalCalendarOpen ? (
+                <div className="w-fit rounded-[16px] bg-[var(--color-surface-soft)] p-3.5 shadow-[0_18px_44px_rgba(0,0,0,0.28)] ring-1 ring-white/5">
+                  <div className="flex items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setGoalCalendarMonth((current) => addMonths(current, -1))}
+                      className="inline-flex size-7 items-center justify-center rounded-lg bg-[var(--color-panel)] text-textMuted transition hover:bg-[var(--color-surface-hover)] hover:text-textStrong"
+                      aria-label="Previous month"
+                    >
+                      <ChevronLeft className="size-3.5" />
+                    </button>
+                    <div className="text-[13px] font-semibold text-textStrong">
+                      {goalCalendarMonth.toLocaleDateString("en-IN", {
+                        month: "long",
+                        year: "numeric"
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setGoalCalendarMonth((current) => addMonths(current, 1))}
+                      className="inline-flex size-7 items-center justify-center rounded-lg bg-[var(--color-panel)] text-textMuted transition hover:bg-[var(--color-surface-hover)] hover:text-textStrong"
+                      aria-label="Next month"
+                    >
+                      <ChevronRight className="size-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-textMuted">
+                    {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((day) => (
+                      <span key={day} className="py-1">
+                        {day}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-7 gap-1">
+                    {goalCalendarDays.map((day) => {
+                      const dayValue = formatDateValue(day.date);
+                      const isSelected = goalDate === dayValue;
+                      const isCurrentMonth = day.inCurrentMonth;
+                      return (
+                        <button
+                          key={dayValue}
+                          type="button"
+                          onClick={() => {
+                            setGoalDate(dayValue);
+                            setGoalCalendarOpen(false);
+                          }}
+                          className={`inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-[12px] transition ${
+                            isSelected
+                              ? "bg-[#2d6cdf] font-semibold text-white"
+                              : isCurrentMonth
+                                ? "text-textStrong hover:bg-[var(--color-panel)]"
+                                : "text-textMuted hover:bg-[var(--color-panel)]"
+                          }`}
+                        >
+                          {day.date.getDate()}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             {studyGoals.length === 0 ? (
@@ -290,4 +420,44 @@ export function AnalyticsPage() {
       </div>
     </div>
   );
+}
+
+function startOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function addMonths(date: Date, delta: number) {
+  return new Date(date.getFullYear(), date.getMonth() + delta, 1);
+}
+
+function formatDateValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatCalendarDate(value: string) {
+  const date = new Date(`${value}T00:00:00`);
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
+}
+
+function buildCalendarDays(month: Date) {
+  const firstDay = startOfMonth(month);
+  const firstWeekday = (firstDay.getDay() + 6) % 7;
+  const startDate = new Date(firstDay);
+  startDate.setDate(firstDay.getDate() - firstWeekday);
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + index);
+    return {
+      date,
+      inCurrentMonth: date.getMonth() === month.getMonth()
+    };
+  });
 }

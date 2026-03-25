@@ -466,26 +466,6 @@ export function ContentDetailPage() {
                     Add to Queue
                   </SecondaryButton>
                 )}
-                <div className="ml-auto flex items-center gap-2">
-                  <SecondaryButton
-                    onClick={() => void handleTogglePin()}
-                    disabled={processing}
-                    className={`px-3 ${content.pinned ? "bg-[rgba(96,165,250,0.14)] text-[#93c5fd] hover:bg-[rgba(96,165,250,0.2)]" : ""}`}
-                    aria-label={content.pinned ? "Unpin content" : "Pin content"}
-                    title={content.pinned ? "Unpin" : "Pin"}
-                  >
-                    <Pin className={`size-4 transition ${content.pinned ? "fill-current" : ""}`} />
-                  </SecondaryButton>
-                  <SecondaryButton
-                    onClick={() => void handleDelete()}
-                    disabled={processing}
-                    className="px-3 text-[#f97066] hover:bg-[rgba(249,112,102,0.12)]"
-                    aria-label="Delete content"
-                    title="Delete"
-                  >
-                    <Trash2 className="size-4" />
-                  </SecondaryButton>
-                </div>
               </div>
             </div>
           </SectionCard>
@@ -517,25 +497,22 @@ export function ContentDetailPage() {
           >
             {activeTab === "notes" ? (
               <div className="grid gap-4">
-                <div className="flex items-center justify-between gap-4 rounded-[18px] bg-[var(--color-surface-soft)] px-4 py-3">
-                  <p className="m-0 text-[14px] text-textMuted">
-                    Add timestamped notes while you watch so each idea becomes a clickable jump point.
-                  </p>
-                  <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--color-surface-muted)] px-3 py-1.5 text-[13px] text-textMuted">
-                    <Clock3 className="size-3.5" />
-                    {showPlayer && playerSource?.type === "video"
-                      ? `Capture ${formatNoteTimestamp(Math.floor(currentPlaybackSeconds))}`
-                      : "Open video for timestamps"}
-                  </span>
-                </div>
-
                 <div className="rounded-[18px] bg-[var(--color-surface-soft)] p-4">
+                  <div className="mb-4 flex items-center justify-between gap-4">
+                    <h3 className="m-0 text-[15px] font-semibold text-textStrong">Notes</h3>
+                    <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--color-surface-muted)] px-3 py-1.5 text-[13px] text-textMuted">
+                      <Clock3 className="size-3.5" />
+                      {showPlayer && playerSource?.type === "video"
+                        ? formatNoteTimestamp(Math.floor(currentPlaybackSeconds))
+                        : "No timestamp"}
+                    </span>
+                  </div>
                   <textarea
                     value={noteDraft}
                     onChange={(event) => setNoteDraft(event.target.value)}
-                    rows={10}
-                    className="min-h-[260px] w-full rounded-[16px] bg-panel px-4 py-4 text-[15px] leading-7 text-textStrong outline-none"
-                    placeholder="Write a note, takeaway, or action item. Pinpoint will attach the current timestamp automatically."
+                    rows={8}
+                    className="min-h-[220px] w-full rounded-[16px] bg-panel px-4 py-4 text-[15px] leading-7 text-textStrong outline-none"
+                    placeholder="Write a note, takeaway, or action item."
                   />
                   <div className="mt-4 flex justify-end">
                     <PrimaryButton onClick={handleCreateIndexedNote} disabled={noteDraft.trim().length === 0}>
@@ -653,13 +630,37 @@ export function ContentDetailPage() {
 
               <div className="flex flex-wrap gap-2">
                 <TagPill staticStyle>{content.contentType}</TagPill>
-                {content.pinned ? <TagPill staticStyle>Pinned</TagPill> : null}
               </div>
             </WorkflowGroup>
 
-            <WorkflowGroup title="Note Index">
+            <WorkflowGroup title="Actions">
+              <div className="grid grid-cols-2 gap-3">
+                <SecondaryButton
+                  onClick={() => void handleTogglePin()}
+                  disabled={processing}
+                  className={`px-3 ${content.pinned ? "bg-[rgba(96,165,250,0.14)] text-[#93c5fd] hover:bg-[rgba(96,165,250,0.2)]" : ""}`}
+                  aria-label={content.pinned ? "Unpin content" : "Pin content"}
+                  title={content.pinned ? "Unpin" : "Pin"}
+                >
+                  <Pin className={`size-4 transition ${content.pinned ? "fill-current" : ""}`} />
+                  {content.pinned ? "Pinned" : "Pin"}
+                </SecondaryButton>
+                <SecondaryButton
+                  onClick={() => void handleDelete()}
+                  disabled={processing}
+                  className="px-3 text-[#f97066] hover:bg-[rgba(249,112,102,0.12)]"
+                  aria-label="Delete content"
+                  title="Delete"
+                >
+                  <Trash2 className="size-4" />
+                  Delete
+                </SecondaryButton>
+              </div>
+            </WorkflowGroup>
+
+            <WorkflowGroup title="Notes">
               <div className="mb-1 flex items-center justify-between gap-3">
-                <p className="m-0 text-[13px] text-textMuted">Timestamped study notes for this lesson</p>
+                <p className="m-0 text-[13px] text-textMuted">Jump back to important moments</p>
                 <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-[var(--color-surface-muted)] px-2.5 py-1 text-[12px] text-textMuted">
                   {notes.length}
                 </span>
@@ -668,12 +669,9 @@ export function ContentDetailPage() {
               {notes.length === 0 ? (
                 <div className="rounded-[16px] bg-panel px-4 py-5 text-center">
                   <p className="m-0 text-[14px] font-semibold text-textStrong">No notes yet</p>
-                  <p className="mt-2 text-[13px] leading-6 text-textMuted">
-                    Add a note in the workspace and it will appear here as a clickable index point.
-                  </p>
                 </div>
               ) : (
-                <div className="app-scrollbar grid max-h-[320px] gap-3 overflow-y-auto pr-1">
+                <div className="app-scrollbar grid max-h-[280px] gap-3 overflow-y-auto pr-1">
                   {notes.map((note) => (
                     <div key={note.id} className="grid gap-3 rounded-[16px] bg-panel p-3.5">
                       <button
@@ -690,7 +688,7 @@ export function ContentDetailPage() {
                             {formatNoteTimestamp(note.timestampSeconds)}
                           </span>
                         </div>
-                        <p className="m-0 text-[14px] leading-6 text-textStrong">{note.text}</p>
+                        <p className="line-clamp-2 m-0 text-[14px] leading-6 text-textStrong">{note.text}</p>
                       </button>
                       <div className="flex justify-end">
                         <SecondaryButton
