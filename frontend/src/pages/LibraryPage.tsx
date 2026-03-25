@@ -1,6 +1,6 @@
 import { Check, ChevronDown, ChevronRight, Filter, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { EmptyStateCard } from "../components/ui/EmptyStateCard";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SearchBar } from "../components/ui/SearchBar";
@@ -32,6 +32,7 @@ export function LibraryPage() {
     folders,
     folderTree,
     continueLearning,
+    studyGoals,
     addQueueItem,
     removeQueueItem,
     studyQueue,
@@ -89,6 +90,11 @@ export function LibraryPage() {
     () => continueLearning.filter((video) => !dismissedContinueLearningIds.includes(video.id)),
     [continueLearning, dismissedContinueLearningIds]
   );
+  const nearestActiveGoal = useMemo(() => {
+    return [...studyGoals]
+      .filter((goal) => !goal.completed)
+      .sort((left, right) => left.daysRemaining - right.daysRemaining)[0] ?? null;
+  }, [studyGoals]);
   const filteredVideoItems = useMemo(
     () => filteredVideos.filter((video) => video.contentType === "VIDEO"),
     [filteredVideos]
@@ -234,6 +240,27 @@ export function LibraryPage() {
         subtitle={selectedFolder ? `Browsing content in ${selectedFolder.name}` : undefined}
       />
 
+      {nearestActiveGoal ? (
+        <SectionCard className="mt-[18px] p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-textMuted">Nearest Goal</p>
+              <h2 className="mt-1 truncate text-[18px] font-semibold text-textStrong">{nearestActiveGoal.title}</h2>
+              <p className="mt-1 text-[14px] text-textMuted">
+                {nearestActiveGoal.daysRemaining} day{nearestActiveGoal.daysRemaining === 1 ? "" : "s"} remaining
+                {nearestActiveGoal.contentTitle ? ` • ${nearestActiveGoal.contentTitle}` : ""}
+              </p>
+            </div>
+            <Link
+              to="/analytics"
+              className="inline-flex min-h-[40px] items-center rounded-[12px] bg-[var(--color-surface-soft)] px-3.5 text-[14px] font-semibold text-textStrong transition hover:bg-[var(--color-surface-hover)]"
+            >
+              View Goal
+            </Link>
+          </div>
+        </SectionCard>
+      ) : null}
+
       <SectionCard className="mt-[24px] p-4">
         <div className="grid gap-4">
           <div className="flex items-center gap-2">
@@ -248,7 +275,7 @@ export function LibraryPage() {
                 onClick={() => setContentView(option.value as ContentView)}
                 className={`inline-flex min-h-[38px] items-center rounded-[12px] px-3.5 text-[14px] font-semibold transition ${
                   contentView === option.value
-                    ? "bg-[var(--color-surface-selected)] text-textStrong"
+                    ? "bg-[#2d6cdf] text-white shadow-[0_8px_22px_rgba(45,108,223,0.22)]"
                     : "bg-[var(--color-surface-soft)] text-textMuted hover:bg-[var(--color-surface-hover)] hover:text-textStrong"
                 }`}
               >

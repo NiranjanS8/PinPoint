@@ -1,5 +1,5 @@
 import { BarChart3, CalendarDays, Check, Clock3, Target, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { EmptyStateCard } from "../components/ui/EmptyStateCard";
 import { PageHeader } from "../components/ui/PageHeader";
 import { PrimaryButton } from "../components/ui/PrimaryButton";
@@ -26,11 +26,6 @@ export function AnalyticsPage() {
   const { showToast } = useToast();
   const [goalTitle, setGoalTitle] = useState("");
   const [goalDate, setGoalDate] = useState("");
-
-  const completedCount = useMemo(
-    () => progressBreakdown.find((item) => item.label === "Completed")?.count ?? "0 videos",
-    [progressBreakdown]
-  );
 
   async function handleCreateGoal() {
     if (!goalTitle.trim() || !goalDate) {
@@ -135,33 +130,30 @@ export function AnalyticsPage() {
           toneClass="bg-[#eaf2ff] text-[#2563eb]"
           label="Completion Rate"
           value={analyticsStats.completionRate}
-          helper={completedCount}
         />
         <StatCard
           icon={<Clock3 className="size-[18px]" />}
           toneClass="bg-[#e9f9ef] text-[#16a34a]"
           label="Focus Hours"
           value={focusAnalytics.totalFocusHours}
-          helper={`${focusAnalytics.totalFocusMinutes} minutes logged`}
         />
         <StatCard
           icon={<Target className="size-[18px]" />}
           toneClass="bg-[#f4edff] text-[#9333ea]"
           label="Current Streak"
           value={focusAnalytics.currentStreak}
-          helper="Days with at least one focus session"
+          helper=""
         />
         <StatCard
           icon={<CalendarDays className="size-[18px]" />}
           toneClass="bg-[#fff0e7] text-[#f97316]"
           label="Longest Streak"
           value={focusAnalytics.longestStreak}
-          helper="Best run so far"
         />
       </div>
 
-      <div className="mt-7 grid grid-cols-[1.2fr_0.95fr] gap-7">
-        <SectionCard title="Focus Contributions">
+      <div className="mt-7 grid grid-cols-2 gap-7 items-stretch">
+        <SectionCard title="Focus Contributions" className="h-full min-h-[360px]">
           {focusAnalytics.contributionDays.length === 0 ? (
             <p className="text-[15px] text-textMuted">Complete a focus session to start your contribution graph.</p>
           ) : (
@@ -185,14 +177,11 @@ export function AnalyticsPage() {
                   />
                 ))}
               </div>
-              <p className="text-[14px] text-textMuted">
-                A GitHub-style view of your last 12 weeks of focus sessions.
-              </p>
             </div>
           )}
         </SectionCard>
 
-        <SectionCard title="Topic Heatmap">
+        <SectionCard title="Topic Heatmap" className="h-full min-h-[360px]">
           {focusAnalytics.topicHeatmap.length === 0 ? (
             <p className="text-[15px] text-textMuted">Add tags or organize content into folders to reveal your topic mix.</p>
           ) : (
@@ -218,15 +207,15 @@ export function AnalyticsPage() {
         </SectionCard>
       </div>
 
-      <div className="mt-7 grid grid-cols-[1.15fr_1fr] gap-7">
-        <SectionCard title="Goal Tracker">
+      <div className="mt-7 grid grid-cols-2 gap-7 items-stretch">
+        <SectionCard title="Goal Tracker" className="h-full min-h-[340px]">
           <div className="grid gap-5">
             <div className="grid grid-cols-[minmax(0,1fr)_180px_auto] gap-3">
               <input
                 type="text"
                 value={goalTitle}
                 onChange={(event) => setGoalTitle(event.target.value)}
-                placeholder="Finish the Spring Security course"
+                placeholder="Set a study goal"
                 className="min-h-[44px] rounded-[13px] bg-[var(--color-surface-soft)] px-4 text-[15px] text-textStrong outline-none ring-1 ring-transparent focus:ring-white/10"
               />
               <input
@@ -287,7 +276,7 @@ export function AnalyticsPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Recently Watched">
+        <SectionCard title="Recently Watched" className="h-full min-h-[340px]">
           {recentlyWatched.length > 0 ? (
             <div className="grid gap-4">
               {recentlyWatched.map((video) => (

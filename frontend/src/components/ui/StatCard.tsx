@@ -17,23 +17,23 @@ export function StatCard({
   progress?: number;
 }) {
   return (
-    <article className="rounded-shell bg-panel px-7 py-6 shadow-panel">
-      <div className="flex items-start gap-4">
-        <div className={`inline-flex size-[46px] items-center justify-center rounded-[14px] ${toneClass}`}>
+    <article className="rounded-shell bg-panel px-5 py-4 shadow-panel">
+      <div className="flex items-start gap-3">
+        <div className={`inline-flex size-[40px] items-center justify-center rounded-[12px] ${toneClass}`}>
           {icon}
         </div>
-        <div className="grid gap-1">
-          <span className="text-sm text-textMuted">{label}</span>
-          <strong className="text-[21px] leading-[1.15] text-textStrong">{value}</strong>
+        <div className="grid gap-0.5">
+          <span className="text-[13px] text-textMuted">{label}</span>
+          <strong className="text-[19px] leading-[1.15] text-textStrong">{value}</strong>
         </div>
       </div>
       {progress !== undefined ? (
-        <div className="mt-4 grid gap-3">
+        <div className="mt-3 grid gap-2.5">
           <ProgressBar value={progress} tone="muted" />
-          {helper ? <span className="text-sm text-textMuted">{helper}</span> : null}
+          {helper ? <span className="text-[13px] text-textMuted">{helper}</span> : null}
         </div>
       ) : helper ? (
-        <p className="mt-3 text-sm text-textMuted">{helper}</p>
+        <p className="mt-2.5 text-[13px] text-textMuted">{helper}</p>
       ) : null}
     </article>
   );
